@@ -27,7 +27,7 @@ import Testing
         log.append((1...10).map(String.init))
         #expect(log.lines.count == 10)  // under limit + limit / 4
         log.append(["11"])
-        #expect(log.lines == (4...11).map(String.init))
+        #expect(log.lines.map(\.text) == (4...11).map(String.init))
         #expect(log.dropped == 3)
         #expect(log.total == 11)
     }

@@ -25,9 +25,9 @@ import Testing
         try await finished(job)
 
         #expect(job.status == .failed(3))
-        #expect(job.log.lines.contains("args: --build-only /games/A"))
+        #expect(job.log.lines.map(\.text).contains("args: --build-only /games/A"))
         #expect(job.progress?.stage == 2 && job.progress?.percent == 50)
-        #expect(job.log.lines.last == "nxplay: failed (exit 3)")
+        #expect(job.log.lines.last?.text == "nxplay: failed (exit 3)")
     }
 
     @Test func cancelStopsTheWholeProcessTree() async throws {
@@ -42,7 +42,7 @@ import Testing
 
         job.stopGrace = 0.2
         job.start()
-        try await until { job.log.lines.contains("started") }
+        try await until { job.log.lines.map(\.text).contains("started") }
         let child = try #require(
             Int32(
                 String(contentsOf: pidFile, encoding: .utf8).trimmingCharacters(

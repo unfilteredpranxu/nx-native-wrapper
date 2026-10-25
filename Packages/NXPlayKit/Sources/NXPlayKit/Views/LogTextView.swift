@@ -50,10 +50,20 @@ struct LogTextView: NSViewRepresentable {
         let follow = reload || isAtEnd(scroll)
         let chunk = NSMutableAttributedString()
         for line in log.lines[start...] {
-            let separator = storage.length + chunk.length == 0 ? "" : "\n"
-            chunk.append(
-                NSAttributedString(
-                    string: separator + line, attributes: LogStyle.attributes(for: line)))
+            let base = LogStyle.attributes(for: line.text)
+            if storage.length + chunk.length > 0 {
+                chunk.append(NSAttributedString(string: "\n", attributes: base))
+            }
+            if line.segments.isEmpty {
+                chunk.append(NSAttributedString(string: line.text, attributes: base))
+            } else {
+                for segment in line.segments {
+                    chunk.append(
+                        NSAttributedString(
+                            string: segment.text,
+                            attributes: LogStyle.attributes(segment.style, over: base)))
+                }
+            }
         }
         storage.beginEditing()
         storage.append(chunk)
@@ -71,6 +81,7 @@ struct LogTextView: NSViewRepresentable {
 @MainActor
 enum LogStyle {
     static let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+    static let boldFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .bold)
 
     /// build_ipa_from_nsp.py marks problems with [RED] and stage ends with ✓ / ✗.
     static func attributes(for line: String) -> [NSAttributedString.Key: Any] {
@@ -87,5 +98,57 @@ enum LogStyle {
                 .labelColor
             }
         return [.font: font, .foregroundColor: color]
+    }
+
+    /// A terminal style on top of a line's own color: an ANSI color wins over it.
+    static func attributes(_ style: ANSIStyle, over base: [NSAttributedString.Key: Any])
+        -> [NSAttributedString.Key: Any]
+    {
+        var attributes = base
+        var foreground =
+            style.foreground.map(color) ?? (base[.foregroundColor] as? NSColor ?? .labelColor)
+        var background = style.background.map(color)
+        if style.inverse {
+            (foreground, background) = (background ?? .textBackgroundColor, foreground)
+        }
+        if style.dim { foreground = foreground.withAlphaComponent(0.6) }
+        attributes[.foregroundColor] = foreground
+        if let background { attributes[.backgroundColor] = background }
+        var font = style.bold ? boldFont : self.font
+        if style.italic { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
+        attributes[.font] = font
+        if style.underline { attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue }
+        return attributes
+    }
+
+    /// The 16 named colors follow the system palette (readable in light and dark mode);
+    /// the 256-color cube and 24-bit colors are exact.
+    static func color(_ color: ANSIColor) -> NSColor {
+        switch color {
+        case .standard(let n):
+            return switch n % 8 {
+            case 0: n < 8 ? .secondaryLabelColor : .systemGray
+            case 1: .systemRed
+            case 2: .systemGreen
+            case 3: .systemYellow
+            case 4: .systemBlue
+            case 5: .systemPurple
+            case 6: .systemCyan
+            default: .labelColor
+            }
+        case .palette(let n) where n >= 232:
+            let level = CGFloat(8 + (n - 232) * 10) / 255
+            return NSColor(srgbRed: level, green: level, blue: level, alpha: 1)
+        case .palette(let n):
+            let levels: [CGFloat] = [0, 95, 135, 175, 215, 255]
+            let cube = n - 16
+            return NSColor(
+                srgbRed: levels[cube / 36] / 255, green: levels[cube / 6 % 6] / 255,
+                blue: levels[cube % 6] / 255, alpha: 1)
+        case .rgb(let r, let g, let b):
+            return NSColor(
+                srgbRed: CGFloat(r) / 255, green: CGFloat(g) / 255, blue: CGFloat(b) / 255, alpha: 1
+            )
+        }
     }
 }
