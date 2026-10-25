@@ -122,6 +122,8 @@ mise run test    # NXPlayKit tests (swift test --package-path Packages/NXPlayKit
 
 To work in Xcode, run `xcodegen generate` (or `mise run generate`) and open `NXPlay.xcodeproj`. The code lives in the `Packages/NXPlayKit` Swift package; `project.yml` describes the app.
 
+`Package.swift` in the root exists only so SourceKit-LSP (Zed, VS Code, …) understands the app's sources; build and test with the Xcode project and `Packages/NXPlayKit`.
+
 `bin/screenshots [games folder]` regenerates the screenshots in `docs/`. It needs a folder with at least one extracted game (default `~/Games/NintendoSwitch`), and it shows that game's name and icon. Everything else is sample data: paths under `~`, an example team and devices, a scripted build log. The data lives in `Screenshots.swift`, which only Debug builds include. It needs `cwebp` (`brew install webp`) and Screen Recording permission for your terminal.
 
 ## License
