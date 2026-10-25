@@ -55,6 +55,44 @@ find_launcher() {
   echo "$best"
 }
 
+# The launcher holds absolute paths (the build printed them): after the game folder or nxnative moved,
+# point them at where they are now. The build folder is the launcher's own; it was the parent of `cd <build>/run`.
+relocate() {
+  python3 - "$1" "$repo" <<'PY'
+import os, re, shlex, sys
+path, repo = sys.argv[1], os.path.abspath(sys.argv[2])
+build = os.path.dirname(os.path.abspath(path))
+lines = open(path).read().splitlines()
+i = next(i for i, line in enumerate(lines) if line.startswith('cd '))
+tokens = shlex.split(lines[i])
+old = os.path.dirname(tokens[1])
+
+def fix(value):
+    if value == old or value.startswith(old + '/'):
+        return build + value[len(old):]
+    games = re.search(r'/dm/games/.*$', value)   # a profile table of the nxnative checkout
+    if games and not os.path.exists(value) and os.path.exists(repo + games.group(0)):
+        return repo + games.group(0)
+    return value
+
+# rebuilt the way build_ipa_from_nsp.py writes it: cd <run> && KEY=value ... <host> <patched>
+words = []
+for token in tokens:
+    if token == '&&':
+        words.append(token)
+    elif re.match(r'[A-Za-z_]\w*=', token):
+        key, value = token.split('=', 1)
+        words.append(f'{key}={shlex.quote(fix(value))}')
+    else:
+        words.append(shlex.quote(fix(token)))
+cmd = ' '.join(words)
+if cmd != lines[i]:
+    lines[i] = cmd
+    open(path, 'w').write('\n'.join(lines) + '\n')
+    print(f'launcher moved: paths now under {build}')
+PY
+}
+
 start() {
   if [[ $build_only -eq 1 ]]; then exit 0; fi
   if [[ $fps -eq 1 ]]; then export DM_METAL_HUD=1; fi
@@ -71,6 +109,7 @@ if [[ $rebuild -eq 0 ]]; then
   launcher="$(find_launcher)"
   if [[ -n "$launcher" ]]; then
     echo "already built: $launcher (--rebuild to build again)"
+    relocate "$launcher"
     start "$launcher"
   fi
 fi

@@ -29,7 +29,7 @@ To keep the repos elsewhere, set `NXNATIVE=/path/to/nxnative`. To use another ke
 
 Each run starts with `git pull` in nxnative. If new commits come in, the game is rebuilt.
 
-The run command is saved in `<game folder>/<title ID>_build/start_mac.sh`.
+The run command is saved in `<game folder>/<title ID>_build/start_mac.sh`. It holds absolute paths, so after you move a game folder (or nxnative), the next run rewrites them to the new location.
 
 ## Controls
 
