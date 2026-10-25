@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Start a Switch game on the Mac through nxnative: build it once with
+# scripts/build_ipa_from_nsp.py --platform mac, then reuse the run command the build printed.
+#
+# usage: nxplay [--rebuild] <game folder> [extra build_ipa_from_nsp.py options...]
+# env:   NXNATIVE (repository, default ../nxnative beside this script), NX_KEYS (default ~/.switch/prod.keys)
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo="${NXNATIVE:-$here/../nxnative}"
+keys="${NX_KEYS:-$HOME/.switch/prod.keys}"
+launcher_name=start_mac.sh
+
+rebuild=0
+if [[ "${1:-}" == "--rebuild" ]]; then rebuild=1; shift; fi
+if [[ $# -lt 1 ]]; then
+  echo "usage: $(basename "$0") [--rebuild] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  exit 2
+fi
+game="$(cd "$1" && pwd)"; shift
+
+# The newest <title ID>_build/start_mac.sh whose Mac host is still there
+find_launcher() {
+  local best="" f
+  for f in "$game"/*_build/"$launcher_name"; do
+    [[ -f "$f" && -x "$(dirname "$f")/tools/dmhost" ]] || continue
+    [[ -z "$best" || "$f" -nt "$best" ]] && best="$f"
+  done
+  echo "$best"
+}
+
+if [[ $rebuild -eq 0 ]]; then
+  launcher="$(find_launcher)"
+  if [[ -n "$launcher" ]]; then
+    echo "already built, starting: $launcher (--rebuild to build again)"
+    exec bash "$launcher"
+  fi
+fi
+
+log="$(mktemp -t nxplay)"
+trap 'rm -f "$log"' EXIT
+
+# tee makes stdout a pipe: keep the in-place progress bar and the console width the script would see in a terminal
+progress=()
+if [[ -t 1 ]]; then
+  progress=(--progress bar)
+  export COLUMNS="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
+fi
+
+(cd "$repo" && python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --platform mac ${progress[@]+"${progress[@]}"} "$@") | tee "$log"
+
+# The run command is the line after "done: the game runs on the Mac with this command";
+# drop the bar's carriage-return redraws in front of it.
+cmd="$(awk '{ sub(/.*\r/, "") } found { print; exit } /done: the game runs on the Mac with this command/ { found = 1 }' "$log")"
+if [[ "$cmd" != cd\ * ]]; then
+  echo "nxplay: no run command in the build output" >&2
+  exit 1
+fi
+
+# "cd <id>_build/run && ...": the launcher goes into <id>_build
+run_dir="$(python3 -c 'import shlex, sys; print(shlex.split(sys.argv[1])[1])' "$cmd")"
+launcher="$(dirname "$run_dir")/$launcher_name"
+printf '#!/bin/sh\n# written by nxplay from the build output\n%s\n' "$cmd" > "$launcher"
+chmod +x "$launcher"
+
+echo "saved: $launcher"
+exec bash "$launcher"
