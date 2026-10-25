@@ -31,6 +31,24 @@ Each run starts with `git pull` in nxnative. If new commits come in, the game is
 
 The run command is saved in `<game folder>/<title ID>_build/start_mac.sh`.
 
+## Controls
+
+| Key | Switch button |
+| --- | --- |
+| W A S D | Left stick |
+| Arrow keys | D-pad |
+| J / K / U / I | A / B / X / Y |
+| Q / E | L / R |
+| Z / C | ZL / ZR |
+| F / G | Press left stick / press right stick |
+| Return / Tab | + / − |
+| Space | Shake the controller (while held) |
+| Left mouse button | Touchscreen |
+| ⌃⌘F | Toggle full screen |
+| ⌘Q | Quit the game |
+
+Controllers are detected automatically, with buttons by position (right A, bottom B, top X, left Y). Extra controllers become extra players for local co-op.
+
 ## NX Play.app
 
 A macOS app that runs `nxplay` for you. Pick the games folder (one subfolder per game). It shows the extracted games with their icons and the rest with an Extract button. Extract All builds them one after another, and the panel at the bottom shows the selected game's output.

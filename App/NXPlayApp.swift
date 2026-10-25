@@ -17,7 +17,15 @@ struct NXPlayApp: App {
                 Button("Refresh") { library.refresh() }
                     .keyboardShortcut("r")
             }
+            CommandGroup(before: .help) {
+                ControlsButton()
+            }
         }
+
+        Window("Game Controls", id: ControlsView.windowID) {
+            ControlsView()
+        }
+        .windowResizability(.contentSize)
 
         Settings {
             SettingsView()

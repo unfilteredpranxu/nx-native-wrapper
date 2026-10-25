@@ -68,6 +68,7 @@ public struct RootView: View {
             }
             .help("Extract every game not extracted yet, one after another")
             .disabled(library.extractableGames.isEmpty)
+            ControlsButton()
         }
     }
 
