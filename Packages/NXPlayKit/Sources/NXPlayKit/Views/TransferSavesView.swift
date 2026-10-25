@@ -82,7 +82,9 @@ struct TransferSavesView: View {
                     Text(row.path).lineLimit(1).truncationMode(.middle).help(row.path)
                 }
                 TableColumn("This Mac") { row in FileCell(file: row.mac) }
+                    .width(min: 120, ideal: 130)
                 TableColumn(transfer.device?.name ?? "Device") { row in FileCell(file: row.device) }
+                    .width(min: 120, ideal: 130)
                 TableColumn("") { row in
                     StatusCell(status: row.status, deviceName: transfer.device?.name ?? "device")
                 }
@@ -162,14 +164,19 @@ private struct FileCell: View {
 
     var body: some View {
         if let file {
+            // the time decides which save is newer: its own line, never truncated; the date and size under it
             VStack(alignment: .leading, spacing: 1) {
+                Text(file.modified, format: .dateTime.hour().minute().second())
+                    .monospacedDigit()
+                    .fixedSize()
                 Text(
-                    file.modified,
-                    format: .dateTime.day().month(.abbreviated).year().hour().minute())
-                Text(ByteCountFormatter.string(fromByteCount: Int64(file.size), countStyle: .file))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    "\(file.modified.formatted(.dateTime.day().month(.abbreviated).year())) · \(ByteCountFormatter.string(fromByteCount: Int64(file.size), countStyle: .file))"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
             }
+            .help(file.modified.formatted(date: .complete, time: .complete))
         } else {
             Text("—").foregroundStyle(.tertiary)
         }
