@@ -8,20 +8,25 @@ struct LogPanel: View {
         let game = library.selectedGame
         let job = game.flatMap(library.job(for:))
         VStack(spacing: 0) {
+            // the header keeps its height; the split view's extra height goes to the output
             header(game: game, job: job)
+                .fixedSize(horizontal: false, vertical: true)
             Divider()
-            if let job {
-                LogTextView(jobID: job.id, log: job.log)
-            } else {
-                ContentUnavailableView(
-                    "No Output",
-                    systemImage: "text.alignleft",
-                    description: Text(
-                        game == nil
-                            ? "Select a game."
-                            : "Extract or play the game to see nxplay's output here.")
-                )
+            Group {
+                if let job {
+                    LogTextView(jobID: job.id, log: job.log)
+                } else {
+                    ContentUnavailableView(
+                        "No Output",
+                        systemImage: "text.alignleft",
+                        description: Text(
+                            game == nil
+                                ? "Select a game."
+                                : "Extract or play the game to see nxplay's output here.")
+                    )
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
