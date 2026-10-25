@@ -68,6 +68,8 @@ struct GameCard: View {
         .disabled(busy || !game.isExtracted || !game.canBuildIPA)
         Button(game.ipaURL == nil ? "Build IPA" : "Rebuild IPA") { library.buildIPA(game) }
             .disabled(busy || !game.canBuildIPA)
+        Button("Transfer Saves…") { library.transferSaves(game) }
+            .disabled(busy || game.titleID == nil || game.buildFolder == nil)
         if let job, job.status.isActive {
             Button(job.kind == .play ? "Stop" : "Cancel") { job.cancel() }
         }

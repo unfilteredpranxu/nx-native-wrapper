@@ -13,6 +13,9 @@ public struct RootView: View {
             .navigationTitle(library.root?.lastPathComponent ?? "NX Play")
             .navigationSubtitle(library.root?.path ?? "")
             .toolbar { toolbar }
+            .sheet(item: Bindable(library).transfer) { transfer in
+                TransferSavesView(transfer: transfer)
+            }
             .alert("Can't run nxplay", isPresented: problemShown) {
                 Button("OK") {}
             } message: {

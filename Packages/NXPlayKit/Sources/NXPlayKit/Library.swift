@@ -39,6 +39,8 @@ public final class Library {
     public private(set) var jobs: [Game.ID: Job] = [:]
     public var selection: Game.ID?
     public var problem: String?
+    /// The save transfer sheet, when open.
+    public var transfer: SaveTransfer?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var queue: [Job] = []
@@ -109,6 +111,16 @@ public final class Library {
     public func rebuild(_ game: Game) { run(.rebuild, game) }
     public func buildIPA(_ game: Game) { run(.ipa, game) }
     public func install(_ game: Game, on device: Device) { run(.install(device), game) }
+
+    /// Opens the save transfer for a game; the copy NX Play installs is preferred when a device has several.
+    public func transferSaves(_ game: Game) {
+        refreshDevices()
+        var bundleID: String?
+        if let team, let titleID = game.titleID {
+            bundleID = Self.bundleID(titleID: titleID, team: team)
+        }
+        transfer = SaveTransfer(game: game, preferredBundleID: bundleID)
+    }
 
     public func extractAll() {
         for game in extractableGames { run(.extract, game, select: false) }
