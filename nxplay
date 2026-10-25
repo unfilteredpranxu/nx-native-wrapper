@@ -2,8 +2,9 @@
 # Start a Switch game on the Mac through nxnative: build it once with
 # scripts/build_ipa_from_nsp.py --platform mac, then reuse the run command the build printed.
 #
-# usage: nxplay [--rebuild] [--build-only] [--fps] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
+# usage: nxplay [--rebuild] [--build-only] [--ipa] [--fps] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
 #   --build-only   build (when needed) and save the launcher, without starting the game
+#   --ipa          build the iOS IPA instead, into the game folder (needs the NSPs)
 #   --fps          Apple's Metal performance HUD over the game (DM_METAL_HUD=1): frame rate, frame and GPU time, memory
 #   --lang <code>  game language for this run (DM_LANG: en-US, ja, fr, de, zh-Hans, ...); it must be one the game has
 # env:   NXNATIVE (repository, default ../nxnative beside this script), NX_KEYS (default ~/.switch/prod.keys)
@@ -14,11 +15,12 @@ repo="${NXNATIVE:-$here/../nxnative}"
 keys="${NX_KEYS:-$HOME/.switch/prod.keys}"
 launcher_name=start_mac.sh
 
-rebuild=0 fps=0 build_only=0 lang=""
+rebuild=0 fps=0 build_only=0 ipa=0 lang=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --rebuild) rebuild=1; shift ;;
     --build-only) build_only=1; shift ;;
+    --ipa) ipa=1; shift ;;
     --fps) fps=1; shift ;;
     --lang) lang="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     *) break ;;
@@ -29,7 +31,7 @@ if [[ -n "$lang" && ! "$lang" =~ ^[A-Za-z]{2}(-[A-Za-z0-9]+)?$ ]]; then
   exit 2
 fi
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
   exit 2
 fi
 game="$(cd "$1" && pwd)"; shift
@@ -43,6 +45,12 @@ if git -C "$repo" pull --ff-only; then
   fi
 else
   echo "nxplay: git pull failed in $repo, going on with the current code" >&2
+fi
+
+if [[ $ipa -eq 1 ]]; then
+  # the script's own default output (<game folder>/<the profile's IPA name>); it reuses every step a Mac build made
+  cd "$repo"
+  exec python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" ${lang:+--language "$lang"} "$@"
 fi
 
 # The newest <title ID>_build/start_mac.sh whose Mac host is still there

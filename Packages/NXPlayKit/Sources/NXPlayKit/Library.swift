@@ -81,6 +81,7 @@ public final class Library {
     public func play(_ game: Game) { run(.play, game) }
     public func extract(_ game: Game) { run(.extract, game) }
     public func rebuild(_ game: Game) { run(.rebuild, game) }
+    public func buildIPA(_ game: Game) { run(.ipa, game) }
 
     public func extractAll() {
         for game in extractableGames { run(.extract, game, select: false) }
@@ -93,9 +94,15 @@ public final class Library {
     private func run(_ kind: Job.Kind, _ game: Game, select: Bool = true) {
         guard !isBusy(game), let command = command(kind, game) else { return }
         let job = Job(kind: kind, game: game, command: command)
-        job.onFinish = { [weak self] _ in
-            self?.refresh()
-            self?.startNextExtraction()
+        job.onFinish = { [weak self] job in
+            guard let self else { return }
+            refresh()
+            if job.kind == .ipa, job.status == .succeeded,
+                let ipa = games.first(where: { $0.id == job.game.id })?.ipaURL
+            {
+                NSWorkspace.shared.activateFileViewerSelecting([ipa])
+            }
+            startNextExtraction()
         }
         jobs[game.id] = job
         if select { selection = game.id }
@@ -133,8 +140,8 @@ public final class Library {
             problem = "No nxnative checkout at \(repo). Set its folder in Settings."
             return nil
         }
-        // a ready game only needs the keys when nxnative changed and it rebuilds; nxplay says so then
-        guard game.state == .ready || fm.fileExists(atPath: keys) else {
+        // playing a ready game only needs the keys when nxnative changed and it rebuilds; nxplay says so then
+        guard (kind == .play && game.state == .ready) || fm.fileExists(atPath: keys) else {
             problem = "No prod.keys at \(keys). Set the file in Settings."
             return nil
         }
@@ -142,6 +149,8 @@ public final class Library {
             switch kind {
             case .extract: ["--build-only"]
             case .rebuild: ["--rebuild", "--build-only"]
+            case .ipa:
+                ["--ipa"] + (GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? [])
             case .play:
                 (metalHUD ? ["--fps"] : [])
                     + (GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? [])

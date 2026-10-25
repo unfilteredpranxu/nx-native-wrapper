@@ -19,12 +19,16 @@ public struct Game: Identifiable, Hashable, Sendable {
     public let languages: [String]
     public let iconURL: URL?
     public let buildFolder: URL?
+    /// The IPA build_ipa_from_nsp.py left in the game folder (the newest, when there are several).
+    public let ipaURL: URL?
     public let hasPackages: Bool
     public let state: State
 
     public var id: String { folder.path }
     public var isExtracted: Bool { state != .notExtracted }
     public var canExtract: Bool { state == .notExtracted && hasPackages }
+    /// The IPA build starts from the NSPs, whatever the Mac build left.
+    public var canBuildIPA: Bool { hasPackages }
 
     public var logsFolder: URL? { existingFolder("logs") }
 

@@ -20,8 +20,9 @@ import Testing
         // extracted, no launcher
         _ = try build(
             game: "Zelda (NSP)", titleID: "01007EF00011E000", versions: [786432], title: nil)
-        // only packages
+        // only packages, and an IPA built earlier
         try touch(root.appending(path: "Wonder/game.NSZ"))
+        try touch(root.appending(path: "Wonder/SMBWMobile.ipa"))
         // nothing of a game
         try touch(root.appending(path: "Music/01. Track.mp3"))
         try touch(root.appending(path: "Music/0100000000000000_notabuild/x"))
@@ -34,8 +35,10 @@ import Testing
         #expect(metroid.titleID == "010093801237C000")
         #expect(metroid.version == "2.1.0")
         #expect(metroid.iconURL?.path.hasSuffix("extract/v327680/icon.jpg") == true)
+        #expect(metroid.ipaURL == nil)
         #expect(games[1].state == .notExtracted)
         #expect(games[1].canExtract)
+        #expect(games[1].ipaURL?.lastPathComponent == "SMBWMobile.ipa")
         #expect(games[2].state == .extracted)
         #expect(games[2].hasPackages == false)
     }

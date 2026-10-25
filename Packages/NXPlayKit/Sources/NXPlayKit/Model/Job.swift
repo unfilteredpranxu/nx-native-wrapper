@@ -5,7 +5,7 @@ import Observation
 @MainActor @Observable
 public final class Job: Identifiable {
     public enum Kind: Sendable {
-        case extract, rebuild, play
+        case extract, rebuild, play, ipa
     }
 
     public enum Status: Equatable, Sendable {

@@ -9,6 +9,9 @@ struct GameCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             GameIcon(url: game.iconURL)
+                .overlay(alignment: .topTrailing) {
+                    if let ipa = game.ipaURL { IPABadge(url: ipa).padding(6) }
+                }
             VStack(alignment: .leading, spacing: 2) {
                 Text(game.name)
                     .font(.headline)
@@ -49,12 +52,17 @@ struct GameCard: View {
         } else {
             Button("Extract") { library.extract(game) }.disabled(busy || !game.canExtract)
         }
+        Button(game.ipaURL == nil ? "Build IPA" : "Rebuild IPA") { library.buildIPA(game) }
+            .disabled(busy || !game.canBuildIPA)
         if let job, job.status.isActive {
             Button(job.kind == .play ? "Stop" : "Cancel") { job.cancel() }
         }
         Divider()
         Button("Show in Finder") {
             NSWorkspace.shared.activateFileViewerSelecting([game.buildFolder ?? game.folder])
+        }
+        if let ipa = game.ipaURL {
+            Button("Show IPA in Finder") { NSWorkspace.shared.activateFileViewerSelecting([ipa]) }
         }
         if let save = game.saveFolder {
             Button("Open Save Folder") { NSWorkspace.shared.open(save) }
@@ -83,7 +91,7 @@ private struct GameStatus: View {
                 ProgressView(value: job.status == .queued ? 0 : job.progress?.fraction ?? 0)
                     .controlSize(.small)
                 Text(
-                    job.status == .queued ? "Waiting for the current extraction" : stageText(job)
+                    job.status == .queued ? "Waiting for the current build" : stageText(job)
                 )
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -96,6 +104,8 @@ private struct GameStatus: View {
         switch (job?.status, job?.kind) {
         case (.running?, .play?):
             Badge(text: job?.isBuilding == true ? "Building" : "Running", color: .green)
+        case (.running?, .ipa?):
+            Badge(text: "Building IPA", color: .blue)
         case (.running?, _):
             Badge(text: "Extracting", color: .blue)
         case (.queued?, _):
@@ -143,6 +153,30 @@ private struct GameStatus: View {
         guard let progress = job.progress else { return "Starting…" }
         let percent = progress.percent.map { " · \($0)%" } ?? ""
         return "\(progress.stage)/\(progress.stages) \(progress.title)\(percent)"
+    }
+}
+
+/// On the icon of a game whose IPA is in its folder: solid, to read over any artwork.
+private struct IPABadge: View {
+    let url: URL
+
+    var body: some View {
+        Text("IPA")
+            .font(.caption2.weight(.bold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .foregroundStyle(.white)
+            .background(Capsule().fill(Color.accentColor))
+            .shadow(radius: 2)
+            .help(help)
+    }
+
+    private var help: String {
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+        return url.lastPathComponent
+            + (size.map {
+                ", " + ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file)
+            } ?? "")
     }
 }
 

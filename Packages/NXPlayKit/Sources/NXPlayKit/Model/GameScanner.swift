@@ -35,6 +35,7 @@ public enum GameScanner {
             languages: nacp?.languages ?? [],
             iconURL: build?.iconURL,
             buildFolder: build?.folder,
+            ipaURL: newest(entries.filter { $0.pathExtension.lowercased() == "ipa" }),
             hasPackages: hasPackages,
             state: state
         )
@@ -84,6 +85,14 @@ public enum GameScanner {
             }
             .sorted { $0.0 > $1.0 }
             .map(\.1)
+    }
+
+    static func newest(_ files: [URL]) -> URL? {
+        func modified(_ url: URL) -> Date {
+            (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate ?? .distantPast
+        }
+        return files.max { modified($0) < modified($1) }
     }
 
     static func isBuildFolder(_ url: URL) -> Bool {
