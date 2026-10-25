@@ -27,6 +27,10 @@ run = "bin/build"
 description = "Build NX Play.app and install it into /Applications"
 run = "bin/install"
 
+[tasks.screenshots]
+description = "Regenerate the README screenshots in docs/ (bin/screenshots [games folder])"
+run = "bin/screenshots"
+
 [tasks.app]
 description = "Build and open NX Play"
 depends = ["build"]

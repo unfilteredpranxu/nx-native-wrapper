@@ -21,11 +21,11 @@ public final class SaveTransfer: Identifiable {
     public var direction: Direction = .toMac
     public var device: Device?
     public var app: DeviceApp?
-    public private(set) var apps: [DeviceApp] = []
-    public private(set) var macFiles: [SaveFile] = []
+    public internal(set) var apps: [DeviceApp] = []
+    public internal(set) var macFiles: [SaveFile] = []
     /// nil until read from the device.
-    public private(set) var deviceFiles: [SaveFile]?
-    public private(set) var phase: Phase = .idle
+    public internal(set) var deviceFiles: [SaveFile]?
+    public internal(set) var phase: Phase = .idle
 
     @ObservationIgnored private let preferredBundleID: String?
 

@@ -3,7 +3,7 @@ import SwiftUI
 
 @main
 struct NXPlayApp: App {
-    @State private var library = Library()
+    @State private var library = Library.forLaunch()
 
     var body: some Scene {
         Window("NX Play", id: "main") {

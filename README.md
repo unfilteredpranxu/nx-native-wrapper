@@ -9,6 +9,8 @@
 
 > You need your own games (NSP, NSZ, XCI or XCZ files) and the `prod.keys` of your own Switch. Nothing here downloads games or keys.
 
+![NX Play: a game being rebuilt, with nxplay's output below](docs/library.webp)
+
 ## Requirements
 
 - A Mac with Apple silicon and macOS 15 or later. On an Intel Mac, IPAs and device installs work, but games cannot run on the Mac.
@@ -55,7 +57,11 @@ Extracted games show their icons and a **Play** button; the others have **Extrac
 - **Transfer Saves**: compares the Mac's save with a device's, file by file, and copies one over the other. The replaced save is kept in `<title ID>_build/run/save-backups`.
 - **Show in Finder**, **Open Save Folder**, **Open Build Logs**.
 
+![Transfer Saves: the Mac's save is newer than the iPad's](docs/transfer-saves.webp)
+
 Settings has the nxnative folder, the keys file, the game language, the Apple team for device installs, and Apple's Metal performance HUD. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls.
+
+<img src="docs/settings.webp" alt="NX Play's Settings" width="560">
 
 ## Command line
 
@@ -115,6 +121,8 @@ mise run test    # NXPlayKit tests (swift test --package-path Packages/NXPlayKit
 ```
 
 To work in Xcode, run `xcodegen generate` (or `mise run generate`) and open `NXPlay.xcodeproj`. The code lives in the `Packages/NXPlayKit` Swift package; `project.yml` describes the app.
+
+`bin/screenshots [games folder]` regenerates the screenshots in `docs/`. It needs a folder with at least one extracted game (default `~/Games/NintendoSwitch`), and it shows that game's name and icon. Everything else is sample data: paths under `~`, an example team and devices, a scripted build log. The data lives in `Screenshots.swift`, which only Debug builds include. It needs `cwebp` (`brew install webp`) and Screen Recording permission for your terminal.
 
 ## License
 

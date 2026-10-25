@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Regenerate the README screenshots, docs/<scene>.webp, from a Debug build in screenshot mode: the real games of a
+# folder (names, icons) with sample data for everything personal (Packages/NXPlayKit/Sources/NXPlayKit/Screenshots.swift).
+# Needs one extracted game in the folder, cwebp (brew install webp), and Screen Recording permission for the
+# terminal it runs in (System Settings > Privacy & Security), which screencapture asks for.
+#
+# usage: bin/screenshots [games folder] [scene...]   (default ~/Games/NintendoSwitch; scenes: library settings transfer-saves)
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+root="${1:-$HOME/Games/NintendoSwitch}"
+shift || true
+scenes=("$@")
+(( ${#scenes[@]} )) || scenes=(library settings transfer-saves)
+[[ -d "$root" ]] || { echo "bin/screenshots: no games folder at $root" >&2; exit 2; }
+command -v cwebp > /dev/null || { echo "bin/screenshots: cwebp is missing: brew install webp" >&2; exit 2; }
+
+if command -v mise > /dev/null; then mise exec -- xcodegen generate --quiet; else xcodegen generate --quiet; fi
+xcodebuild -project NXPlay.xcodeproj -scheme NXPlay -configuration Debug -destination "platform=macOS,arch=$(uname -m)" \
+  -derivedDataPath build/screenshots -quiet build
+app="build/screenshots/Build/Products/Debug/NX Play.app/Contents/MacOS/NX Play"
+work="$PWD/build/screenshots/png"
+mkdir -p "$work" docs
+
+for scene in "${scenes[@]}"; do
+  ready="$work/$scene.ready"
+  rm -f "$ready"
+  "$app" -NXPlayScreenshot "$scene" -NXPlayScreenshotRoot "$root" -NXPlayScreenshotReady "$ready" \
+    -ApplePersistenceIgnoreState YES > "$work/$scene.log" 2>&1 &
+  pid=$!
+  for _ in $(seq 150); do [[ -s "$ready" ]] && break; sleep 0.2; done
+  window="$(cat "$ready" 2>/dev/null || echo "error: the app did not get ready (log: $work/$scene.log)")"
+  if [[ ! "$window" =~ ^[0-9]+$ ]]; then
+    kill "$pid" 2> /dev/null || true
+    echo "bin/screenshots: $scene: $window" >&2
+    exit 1
+  fi
+  screencapture -x -l "$window" "$work/$scene.png"
+  kill "$pid" 2> /dev/null || true
+  wait "$pid" 2> /dev/null || true
+  cwebp -quiet -q 90 -m 6 -metadata none "$work/$scene.png" -o "docs/$scene.webp" 2> /dev/null
+  echo "docs/$scene.webp"
+done

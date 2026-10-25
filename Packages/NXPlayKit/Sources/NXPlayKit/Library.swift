@@ -31,12 +31,12 @@ public final class Library {
     /// The Apple team that signs device installs; empty picks the first paid one Xcode knows.
     public var teamID: String { didSet { defaults.set(teamID, forKey: Keys.team) } }
 
-    public private(set) var teams: [AppleTeam] = []
-    public private(set) var devices: [Device] = []
+    public internal(set) var teams: [AppleTeam] = []
+    public internal(set) var devices: [Device] = []
     public private(set) var isLoadingDevices = false
 
     public private(set) var games: [Game] = []
-    public private(set) var jobs: [Game.ID: Job] = [:]
+    public internal(set) var jobs: [Game.ID: Job] = [:]
     public var selection: Game.ID?
     public var problem: String?
     /// The save transfer sheet, when open.
@@ -45,9 +45,28 @@ public final class Library {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var queue: [Job] = []
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
+    /// Screenshot mode (Screenshots.swift): sample teams and devices that Xcode and devicectl must not replace.
+    @ObservationIgnored let isScreenshot: Bool
+    #if DEBUG
+        /// The scene screenshot mode shows; RootView opens the Settings window for it.
+        var screenshotScene: ScreenshotScene?
+    #endif
 
-    public init(defaults: UserDefaults = .standard) {
+    /// The library the app starts with: a Debug build launched by bin/screenshots shows sample data instead.
+    public static func forLaunch() -> Library {
+        #if DEBUG
+            if let screenshots = Screenshots.fromArguments() { return screenshots.makeLibrary() }
+        #endif
+        return Library()
+    }
+
+    public convenience init(defaults: UserDefaults = .standard) {
+        self.init(defaults: defaults, isScreenshot: false)
+    }
+
+    init(defaults: UserDefaults, isScreenshot: Bool) {
         self.defaults = defaults
+        self.isScreenshot = isScreenshot
         root = defaults.string(forKey: Keys.root).map {
             URL(filePath: $0, directoryHint: .isDirectory)
         }
@@ -73,6 +92,7 @@ public final class Library {
 
     /// Xcode's teams and the reachable devices; on launch, on activation and after an install.
     public func refreshDevices() {
+        guard !isScreenshot else { return }
         teams = AppleTeam.fromXcode()
         guard !isLoadingDevices else { return }
         isLoadingDevices = true

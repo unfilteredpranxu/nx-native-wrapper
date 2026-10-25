@@ -11,10 +11,13 @@ public struct SettingsView: View {
             Section {
                 LabeledContent("Games folder") {
                     HStack {
-                        Text(library.root?.path ?? "None")
-                            .foregroundStyle(library.root == nil ? .secondary : .primary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        Text(
+                            library.root.map { ($0.path as NSString).abbreviatingWithTildeInPath }
+                                ?? "None"
+                        )
+                        .foregroundStyle(library.root == nil ? .secondary : .primary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                         Button("Choose…") { library.chooseRoot() }
                     }
                 }
