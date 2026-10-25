@@ -35,7 +35,8 @@ struct GameCard: View {
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .onTapGesture(count: 2) { library.primaryAction(for: game) }
         .simultaneousGesture(TapGesture().onEnded { library.selection = game.id })
-        .contextMenu { menu }
+        // macOS menus show only titles unless the label style asks for the icons too
+        .contextMenu { menu.labelStyle(.titleAndIcon) }
         .help(game.folder.path)
     }
 
