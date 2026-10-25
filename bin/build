@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Build NX Play.app (Release) into build/Build/Products/Release.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+mise install --quiet
+mise exec -- xcodegen generate --quiet
+xcodebuild -project NXPlay.xcodeproj -scheme NXPlay -configuration Release \
+  -destination 'generic/platform=macOS' -derivedDataPath build -quiet build
+
+echo "built: $PWD/build/Build/Products/Release/NX Play.app"

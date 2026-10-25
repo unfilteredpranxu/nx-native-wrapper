@@ -35,8 +35,9 @@ The run command is saved in `<game folder>/<title ID>_build/start_mac.sh`.
 A macOS app that runs `nxplay` for you. Pick the games folder (one subfolder per game). It shows the extracted games with their icons and the rest with an Extract button. Extract All builds them one after another, and the panel at the bottom shows the selected game's output.
 
 ```sh
-mise install     # xcodegen
-mise run app     # generate the project, build, open build/Build/Products/Release/NX Play.app
+bin/build        # generate the project and build build/Build/Products/Release/NX Play.app
+bin/install      # build and install into /Applications (or: bin/install ~/Applications)
+mise run app     # build and open it
 mise run test    # NXPlayKit tests
 ```
 

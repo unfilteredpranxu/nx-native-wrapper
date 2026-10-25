@@ -11,8 +11,11 @@ run = "swift test --package-path Packages/NXPlayKit"
 
 [tasks.build]
 description = "Build NX Play.app (Release) into build/"
-depends = ["generate"]
-run = "xcodebuild -project NXPlay.xcodeproj -scheme NXPlay -configuration Release -derivedDataPath build -quiet build"
+run = "bin/build"
+
+[tasks.install]
+description = "Build NX Play.app and install it into /Applications"
+run = "bin/install"
 
 [tasks.app]
 description = "Build and open NX Play"

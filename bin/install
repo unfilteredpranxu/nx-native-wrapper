@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Build NX Play.app and install it into /Applications (or the folder given).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+dest="${1:-/Applications}"
+app="NX Play.app"
+
+bin/build
+rm -rf "$dest/$app"
+ditto "build/Build/Products/Release/$app" "$dest/$app"
+
+echo "installed: $dest/$app"
+if pgrep -xq "NX Play"; then echo "NX Play is running: quit and reopen it to use the new build"; fi
