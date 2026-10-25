@@ -32,6 +32,7 @@ public enum GameScanner {
             name: nacp?.title ?? folder.lastPathComponent,
             titleID: build.map { String($0.folder.lastPathComponent.dropLast("_build".count)) },
             version: nacp?.displayVersion,
+            languages: nacp?.languages ?? [],
             iconURL: build?.iconURL,
             buildFolder: build?.folder,
             hasPackages: hasPackages,

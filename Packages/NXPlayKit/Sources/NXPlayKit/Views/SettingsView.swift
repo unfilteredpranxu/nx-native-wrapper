@@ -35,7 +35,20 @@ public struct SettingsView: View {
                 .foregroundStyle(.secondary)
             }
             Section {
+                Picker("Game language", selection: $library.language) {
+                    Text("As built").tag("")
+                    Divider()
+                    ForEach(GameLanguage.all) { language in
+                        Text(language.name).tag(language.code)
+                    }
+                }
                 Toggle("Show the Metal performance HUD while playing", isOn: $library.metalHUD)
+            } footer: {
+                Text(
+                    "Sets DM_LANG when a game starts. A game without the language gets the same language for another region, or keeps its build's."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

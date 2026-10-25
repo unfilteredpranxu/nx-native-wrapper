@@ -15,6 +15,8 @@ public struct Game: Identifiable, Hashable, Sendable {
     public let name: String
     public let titleID: String?
     public let version: String?
+    /// Language codes the game supports (control.nacp); empty before extraction.
+    public let languages: [String]
     public let iconURL: URL?
     public let buildFolder: URL?
     public let hasPackages: Bool

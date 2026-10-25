@@ -59,7 +59,7 @@ import Testing
         let script = folder.appending(path: "nxplay")
         try ("#!/bin/bash\n" + body + "\n").write(to: script, atomically: true, encoding: .utf8)
         let game = Game(
-            folder: folder, name: "Test", titleID: nil, version: nil, iconURL: nil,
+            folder: folder, name: "Test", titleID: nil, version: nil, languages: [], iconURL: nil,
             buildFolder: nil, hasPackages: true, state: .notExtracted)
         return Job(
             kind: .extract, game: game,

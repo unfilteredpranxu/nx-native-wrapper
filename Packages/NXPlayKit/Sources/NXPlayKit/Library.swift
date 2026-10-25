@@ -11,6 +11,7 @@ public final class Library {
         static let nxnative = "nxnativePath"
         static let keys = "keysPath"
         static let metalHUD = "metalHUD"
+        static let language = "language"
     }
 
     public var root: URL? {
@@ -24,6 +25,8 @@ public final class Library {
     public var keysPath: String { didSet { defaults.set(keysPath, forKey: Keys.keys) } }
     /// Play with Apple's Metal performance HUD (nxplay --fps).
     public var metalHUD: Bool { didSet { defaults.set(metalHUD, forKey: Keys.metalHUD) } }
+    /// Preferred game language (a DM_LANG code); empty keeps each game's build language.
+    public var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
 
     public private(set) var games: [Game] = []
     public private(set) var jobs: [Game.ID: Job] = [:]
@@ -42,6 +45,7 @@ public final class Library {
         nxnativePath = defaults.string(forKey: Keys.nxnative) ?? Self.defaultNXNative
         keysPath = defaults.string(forKey: Keys.keys) ?? NSHomeDirectory() + "/.switch/prod.keys"
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
+        language = defaults.string(forKey: Keys.language) ?? ""
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -138,7 +142,9 @@ public final class Library {
             switch kind {
             case .extract: ["--build-only"]
             case .rebuild: ["--rebuild", "--build-only"]
-            case .play: metalHUD ? ["--fps"] : []
+            case .play:
+                (metalHUD ? ["--fps"] : [])
+                    + (GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? [])
             }
         arguments.append(game.folder.path)
         return NXPlayCommand(

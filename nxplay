@@ -2,9 +2,10 @@
 # Start a Switch game on the Mac through nxnative: build it once with
 # scripts/build_ipa_from_nsp.py --platform mac, then reuse the run command the build printed.
 #
-# usage: nxplay [--rebuild] [--build-only] [--fps] <game folder> [extra build_ipa_from_nsp.py options...]
-#   --build-only  build (when needed) and save the launcher, without starting the game
-#   --fps         Apple's Metal performance HUD over the game (DM_METAL_HUD=1): frame rate, frame and GPU time, memory
+# usage: nxplay [--rebuild] [--build-only] [--fps] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
+#   --build-only   build (when needed) and save the launcher, without starting the game
+#   --fps          Apple's Metal performance HUD over the game (DM_METAL_HUD=1): frame rate, frame and GPU time, memory
+#   --lang <code>  game language for this run (DM_LANG: en-US, ja, fr, de, zh-Hans, ...); it must be one the game has
 # env:   NXNATIVE (repository, default ../nxnative beside this script), NX_KEYS (default ~/.switch/prod.keys)
 set -euo pipefail
 
@@ -13,17 +14,22 @@ repo="${NXNATIVE:-$here/../nxnative}"
 keys="${NX_KEYS:-$HOME/.switch/prod.keys}"
 launcher_name=start_mac.sh
 
-rebuild=0 fps=0 build_only=0
+rebuild=0 fps=0 build_only=0 lang=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --rebuild) rebuild=1; shift ;;
     --build-only) build_only=1; shift ;;
     --fps) fps=1; shift ;;
+    --lang) lang="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     *) break ;;
   esac
 done
+if [[ -n "$lang" && ! "$lang" =~ ^[A-Za-z]{2}(-[A-Za-z0-9]+)?$ ]]; then
+  echo "nxplay: --lang wants a language code such as en-US, ja or zh-Hans, not '$lang'" >&2
+  exit 2
+fi
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--fps] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
   exit 2
 fi
 game="$(cd "$1" && pwd)"; shift
@@ -52,6 +58,12 @@ find_launcher() {
 start() {
   if [[ $build_only -eq 1 ]]; then exit 0; fi
   if [[ $fps -eq 1 ]]; then export DM_METAL_HUD=1; fi
+  if [[ -n "$lang" ]]; then
+    # the launcher sets DM_LANG inline, which beats the environment: swap the value in its command
+    echo "game language: $lang"
+    export DM_LANG="$lang"
+    exec bash -c "$(sed -E "s/(^| )DM_LANG=[^ ]*/\1DM_LANG=$lang/" "$1")"
+  fi
   exec bash "$1"
 }
 
