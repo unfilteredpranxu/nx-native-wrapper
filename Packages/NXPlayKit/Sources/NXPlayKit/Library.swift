@@ -12,6 +12,7 @@ public final class Library {
         static let keys = "keysPath"
         static let metalHUD = "metalHUD"
         static let language = "language"
+        static let team = "teamID"
     }
 
     public var root: URL? {
@@ -27,6 +28,12 @@ public final class Library {
     public var metalHUD: Bool { didSet { defaults.set(metalHUD, forKey: Keys.metalHUD) } }
     /// Preferred game language (a DM_LANG code); empty keeps each game's build language.
     public var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
+    /// The Apple team that signs device installs; empty picks the first paid one Xcode knows.
+    public var teamID: String { didSet { defaults.set(teamID, forKey: Keys.team) } }
+
+    public private(set) var teams: [AppleTeam] = []
+    public private(set) var devices: [Device] = []
+    public private(set) var isLoadingDevices = false
 
     public private(set) var games: [Game] = []
     public private(set) var jobs: [Game.ID: Job] = [:]
@@ -46,12 +53,31 @@ public final class Library {
         keysPath = defaults.string(forKey: Keys.keys) ?? NSHomeDirectory() + "/.switch/prod.keys"
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
         language = defaults.string(forKey: Keys.language) ?? ""
+        teamID = defaults.string(forKey: Keys.team) ?? ""
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.stopAll() }
         }
         refresh()
+        refreshDevices()
+    }
+
+    // MARK: - Devices
+
+    public var team: AppleTeam? {
+        teams.first { $0.id == teamID } ?? teams.first { !$0.isFree } ?? teams.first
+    }
+
+    /// Xcode's teams and the reachable devices; on launch, on activation and after an install.
+    public func refreshDevices() {
+        teams = AppleTeam.fromXcode()
+        guard !isLoadingDevices else { return }
+        isLoadingDevices = true
+        Task {
+            devices = await Device.load()
+            isLoadingDevices = false
+        }
     }
 
     // MARK: - Games
@@ -82,6 +108,7 @@ public final class Library {
     public func extract(_ game: Game) { run(.extract, game) }
     public func rebuild(_ game: Game) { run(.rebuild, game) }
     public func buildIPA(_ game: Game) { run(.ipa, game) }
+    public func install(_ game: Game, on device: Device) { run(.install(device), game) }
 
     public func extractAll() {
         for game in extractableGames { run(.extract, game, select: false) }
@@ -102,6 +129,7 @@ public final class Library {
             {
                 NSWorkspace.shared.activateFileViewerSelecting([ipa])
             }
+            if case .install = job.kind { refreshDevices() }
             startNextExtraction()
         }
         jobs[game.id] = job
@@ -145,20 +173,36 @@ public final class Library {
             problem = "No prod.keys at \(keys). Set the file in Settings."
             return nil
         }
-        var arguments: [String] =
-            switch kind {
-            case .extract: ["--build-only"]
-            case .rebuild: ["--rebuild", "--build-only"]
-            case .ipa:
-                ["--ipa"] + (GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? [])
-            case .play:
-                (metalHUD ? ["--fps"] : [])
-                    + (GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? [])
+        let lang = GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? []
+        var environment = NXPlayCommand.environment(nxnative: repo, keys: keys)
+        var arguments: [String]
+        switch kind {
+        case .extract: arguments = ["--build-only", game.folder.path]
+        case .rebuild: arguments = ["--rebuild", "--build-only", game.folder.path]
+        case .ipa: arguments = ["--ipa"] + lang + [game.folder.path]
+        case .play: arguments = (metalHUD ? ["--fps"] : []) + lang + [game.folder.path]
+        case .install(let device):
+            guard let team, let titleID = game.titleID else {
+                problem =
+                    "No Apple developer team in Xcode. Add your account in Xcode › Settings › Apple Accounts."
+                return nil
             }
-        arguments.append(game.folder.path)
-        return NXPlayCommand(
-            script: script, arguments: arguments,
-            environment: NXPlayCommand.environment(nxnative: repo, keys: keys))
+            arguments =
+                ["--device", device.id] + lang + [game.folder.path]
+                + [
+                    "--team-id", team.id, "--bundle-id",
+                    Self.bundleID(titleID: titleID, team: team),
+                ]
+            // a Personal Team cannot provision the Increased Memory Limit capability: build without it
+            if team.isFree { environment["DM_ENTITLEMENTS"] = "" }
+        }
+        return NXPlayCommand(script: script, arguments: arguments, environment: environment)
+    }
+
+    /// App IDs are unique across all teams, so nxnative's default org.nxnative.<title ID> may already
+    /// belong to someone else: put the team in it. Stable, so a reinstall updates the same app and keeps its saves.
+    nonisolated static func bundleID(titleID: String, team: AppleTeam) -> String {
+        "org.nxnative.\(team.id.lowercased()).\(titleID.lowercased())"
     }
 
     // MARK: - Locations

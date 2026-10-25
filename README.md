@@ -23,6 +23,7 @@ To keep the repos elsewhere, set `NXNATIVE=/path/to/nxnative`. To use another ke
 ./nxplay --rebuild ~/Games/MetroidDread    # force a rebuild
 ./nxplay --build-only ~/Games/MetroidDread # build if needed, don't start
 ./nxplay --ipa ~/Games/MetroidDread        # build the iOS IPA into the game folder, to sideload
+./nxplay --device <udid> ~/Games/MetroidDread --team-id <team>   # build with Xcode, install and start on a device
 ./nxplay --fps ~/Games/MetroidDread        # show the Metal performance HUD
 ./nxplay --lang ja ~/Games/MetroidDread    # play in another language (DM_LANG), no rebuild
 ./nxplay ~/Games/MetroidDread -l ja        # extra options go to build_ipa_from_nsp.py

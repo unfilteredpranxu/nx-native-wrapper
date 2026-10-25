@@ -50,7 +50,23 @@ public struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
+            Section {
+                Picker("Apple team", selection: $library.teamID) {
+                    Text(library.team.map { "Automatic (\($0.name))" } ?? "None in Xcode").tag("")
+                    Divider()
+                    ForEach(library.teams) { team in
+                        Text(team.isFree ? "\(team.name) (Personal Team)" : team.name).tag(team.id)
+                    }
+                }
+            } footer: {
+                Text(
+                    "Signs Install on Device: Xcode builds the game for your iPhone or iPad and installs it, no sideloading. Teams come from Xcode › Settings › Apple Accounts; a Personal Team builds without the Increased Memory Limit."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
         }
+        .onAppear { library.refreshDevices() }
         .formStyle(.grouped)
         .frame(width: 600)
         .fixedSize(horizontal: false, vertical: true)

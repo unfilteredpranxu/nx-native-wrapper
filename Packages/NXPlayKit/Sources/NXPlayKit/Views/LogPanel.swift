@@ -71,6 +71,7 @@ struct LogPanel: View {
             case .rebuild: "Rebuild"
             case .play: "Play"
             case .ipa: "Build IPA"
+            case .install(let device): "Install on \(device.name)"
             }
         let state =
             switch job.status {

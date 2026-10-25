@@ -22,6 +22,7 @@ public struct RootView: View {
                 NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
             ) { _ in
                 library.refresh()
+                library.refreshDevices()
             }
     }
 

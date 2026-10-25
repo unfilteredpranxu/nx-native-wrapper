@@ -4,8 +4,10 @@ import Observation
 /// One nxplay run for a game: an extraction (build without starting) or a play, with its live output.
 @MainActor @Observable
 public final class Job: Identifiable {
-    public enum Kind: Sendable {
+    public enum Kind: Hashable, Sendable {
         case extract, rebuild, play, ipa
+        /// Through Xcode: prepare the project, build it signed, install and start it.
+        case install(Device)
     }
 
     public enum Status: Equatable, Sendable {

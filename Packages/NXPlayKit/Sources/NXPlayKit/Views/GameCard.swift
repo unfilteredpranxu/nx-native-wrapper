@@ -52,6 +52,20 @@ struct GameCard: View {
         } else {
             Button("Extract") { library.extract(game) }.disabled(busy || !game.canExtract)
         }
+        Menu("Install on Device") {
+            if library.devices.isEmpty {
+                Text(
+                    library.isLoadingDevices
+                        ? "Looking for devices…"
+                        : "No device: pair one in Xcode, with Developer Mode on")
+            }
+            ForEach(library.devices) { device in
+                Button("\(device.name) · \(device.model)") { library.install(game, on: device) }
+            }
+            Divider()
+            Button("Look Again") { library.refreshDevices() }
+        }
+        .disabled(busy || !game.isExtracted || !game.canBuildIPA)
         Button(game.ipaURL == nil ? "Build IPA" : "Rebuild IPA") { library.buildIPA(game) }
             .disabled(busy || !game.canBuildIPA)
         if let job, job.status.isActive {
@@ -106,6 +120,8 @@ private struct GameStatus: View {
             Badge(text: job?.isBuilding == true ? "Building" : "Running", color: .green)
         case (.running?, .ipa?):
             Badge(text: "Building IPA", color: .blue)
+        case (.running?, .install?):
+            Badge(text: "Installing", color: .blue)
         case (.running?, _):
             Badge(text: "Extracting", color: .blue)
         case (.queued?, _):

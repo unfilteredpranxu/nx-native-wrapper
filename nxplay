@@ -5,6 +5,9 @@
 # usage: nxplay [--rebuild] [--build-only] [--ipa] [--fps] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
 #   --build-only   build (when needed) and save the launcher, without starting the game
 #   --ipa          build the iOS IPA instead, into the game folder (needs the NSPs)
+#   --device <udid>  install on a device through Xcode instead: prepare the game's Xcode project, build it signed
+#                  with your team (Xcode > Settings > Apple Accounts), install and start it; pass --team-id <id>
+#                  (and --bundle-id) after the game folder
 #   --fps          Apple's Metal performance HUD over the game (DM_METAL_HUD=1): frame rate, frame and GPU time, memory
 #   --lang <code>  game language for this run (DM_LANG: en-US, ja, fr, de, zh-Hans, ...); it must be one the game has
 # env:   NXNATIVE (repository, default ../nxnative beside this script), NX_KEYS (default ~/.switch/prod.keys)
@@ -15,12 +18,13 @@ repo="${NXNATIVE:-$here/../nxnative}"
 keys="${NX_KEYS:-$HOME/.switch/prod.keys}"
 launcher_name=start_mac.sh
 
-rebuild=0 fps=0 build_only=0 ipa=0 lang=""
+rebuild=0 fps=0 build_only=0 ipa=0 lang="" device=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --rebuild) rebuild=1; shift ;;
     --build-only) build_only=1; shift ;;
     --ipa) ipa=1; shift ;;
+    --device) device="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     --fps) fps=1; shift ;;
     --lang) lang="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     *) break ;;
@@ -30,8 +34,12 @@ if [[ -n "$lang" && ! "$lang" =~ ^[A-Za-z]{2}(-[A-Za-z0-9]+)?$ ]]; then
   echo "nxplay: --lang wants a language code such as en-US, ja or zh-Hans, not '$lang'" >&2
   exit 2
 fi
+if [[ -n "$device" && ! "$device" =~ ^[0-9A-Fa-f-]+$ ]]; then
+  echo "nxplay: --device wants a device UDID (xcrun devicectl list devices), not '$device'" >&2
+  exit 2
+fi
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa | --device <udid>] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
   exit 2
 fi
 game="$(cd "$1" && pwd)"; shift
@@ -51,6 +59,49 @@ if [[ $ipa -eq 1 ]]; then
   # the script's own default output (<game folder>/<the profile's IPA name>); it reuses every step a Mac build made
   cd "$repo"
   exec python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" ${lang:+--language "$lang"} "$@"
+fi
+
+# Stage lines in build_ipa_from_nsp.py's format, so the app's progress bar follows these steps too
+stage() { stage_t0=$SECONDS; echo "[$(date +%T)] [$1/3] $2 …"; }
+stage_done() { local s=$(( SECONDS - stage_t0 )); printf '[%s] ✓ [%s/3] %s (%d:%02d)\n' "$(date +%T)" "$1" "$2" $(( s / 60 )) $(( s % 60 )); }
+
+if [[ -n "$device" ]]; then
+  (cd "$repo" && python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --prepare-xcode ${lang:+--language "$lang"} "$@")
+
+  project=""
+  for p in "$game"/*_build/xcode/DmIOS.xcodeproj; do
+    [[ -d "$p" ]] && [[ -z "$project" || "$p" -nt "$project" ]] && project="$p"
+  done
+  if [[ -z "$project" ]]; then echo "nxplay: --prepare-xcode left no Xcode project in $game" >&2; exit 1; fi
+  build="$(dirname "$(dirname "$project")")"
+  scheme="$(basename "$(ls "$project"/xcshareddata/xcschemes/*.xcscheme 2>/dev/null | head -1 || true)" .xcscheme)"
+  app="$build/xcode-derived-data/Build/Products/Release-iphoneos/DmIOS.app"
+  xlog="$build/logs/xcode_device.log"
+
+  # the derived data Xcode uses for this project too; the first build copies the whole game into the app.
+  # Built for any iPhone: a device destination needs the phone unlocked through the whole build
+  stage 1 "Xcode build · $scheme"
+  if ! xcodebuild -project "$project" -scheme "$scheme" -configuration Release -destination 'generic/platform=iOS' \
+      -derivedDataPath "$build/xcode-derived-data" -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+      build > "$xlog" 2>&1; then
+    grep -E "error:|BUILD FAILED|requires a provisioning|No Account" "$xlog" | tail -20 || true
+    echo "nxplay: xcodebuild failed; full log: $xlog" >&2
+    exit 1
+  fi
+  stage_done 1 "Xcode build"
+
+  stage 2 "install"
+  xcrun devicectl device install app --device "$device" "$app"
+  stage_done 2 "install"
+
+  stage 3 "launch"
+  bundle="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")"
+  if xcrun devicectl device process launch --device "$device" --terminate-existing "$bundle"; then
+    stage_done 3 "launch"
+  else
+    echo "nxplay: installed; unlock the device and open the app (it could not be started from here)"
+  fi
+  exit 0
 fi
 
 # The newest <title ID>_build/start_mac.sh whose Mac host is still there
