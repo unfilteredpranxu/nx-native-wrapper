@@ -44,18 +44,56 @@ if [[ $# -lt 1 ]]; then
 fi
 game="$(cd "$1" && pwd)"; shift
 
-# Latest nxnative first; new commits make the saved launcher stale, so they force a rebuild
+# Latest nxnative first; new commits make the saved launcher stale, so they force a rebuild.
+# A checkout used through nxplay has no commits of its own, so a rewritten upstream (a force push) is followed too,
+# once it is certain that moving to the new tip loses nothing.
+
+# HEAD holds nothing local: it is behind a former upstream tip (the upstream's reflog; a fresh clone's starts only at
+# the force push), or the branch only ever moved by clone, fast-forward and reset (its own reflog)
+no_local_commits() {
+  local tip branch moves
+  for tip in $(git -C "$repo" rev-list --walk-reflogs -n 50 '@{u}'); do
+    git -C "$repo" merge-base --is-ancestor HEAD "$tip" && return 0
+  done
+  branch="$(git -C "$repo" symbolic-ref --quiet --short HEAD)" || return 1
+  moves="$(git -C "$repo" reflog show --format=%gs "$branch")"
+  [[ -n "$moves" ]] && ! grep -qvE '^(clone|reset|branch): |: [Ff]ast-forward$' <<<"$moves"
+}
+
+update_nxnative() {
+  git -C "$repo" fetch --quiet || return 1
+  local upstream tip
+  upstream="$(git -C "$repo" rev-parse '@{u}')" || return 1
+  if [[ "$upstream" == "$before" ]]; then echo "nxnative: up to date"; return 0; fi
+  if git -C "$repo" merge-base --is-ancestor HEAD '@{u}'; then
+    git -C "$repo" merge --ff-only --quiet '@{u}'
+    return
+  fi
+  if no_local_commits; then
+    echo "nxnative: upstream rewrote its history (force push); following it, no local commits to keep"
+    git -C "$repo" reset --keep '@{u}'   # keeps uncommitted edits, refuses when the new history touches them
+    return
+  fi
+  echo "nxplay: $repo has commits upstream does not; merge or rebase them by hand" >&2
+  return 1
+}
+
 before="$(git -C "$repo" rev-parse HEAD)"
-if git -C "$repo" pull --ff-only; then
+if update_nxnative; then
   if [[ "$(git -C "$repo" rev-parse HEAD)" != "$before" ]]; then
     count="$(git -C "$repo" rev-list --count "$before..HEAD")"
-    echo "nxnative updated: $count new commit$([[ $count == 1 ]] || echo s), rebuilding"
+    # a rewrite can re-create the same code under new commit ids: nothing to rebuild then
+    if [[ "$(git -C "$repo" rev-parse "$before^{tree}")" == "$(git -C "$repo" rev-parse 'HEAD^{tree}')" ]]; then
+      echo "nxnative updated: $count new commit$([[ $count == 1 ]] || echo s), same files as before, no rebuild"
+    else
+      echo "nxnative updated: $count new commit$([[ $count == 1 ]] || echo s), rebuilding"
+      rebuild=1
+    fi
     git -C "$repo" --no-pager log --no-decorate --format='  %C(yellow)%h%C(reset) %s %C(dim)(%an, %ar)%C(reset)' -n 30 "$before..HEAD"
     if (( count > 30 )); then echo "  … and $(( count - 30 )) older"; fi
-    rebuild=1
   fi
 else
-  echo "nxplay: git pull failed in $repo, going on with the current code" >&2
+  echo "nxplay: could not update $repo, going on with the current code" >&2
 fi
 
 if [[ $ipa -eq 1 ]]; then
