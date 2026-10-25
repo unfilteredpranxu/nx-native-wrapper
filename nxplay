@@ -19,6 +19,17 @@ if [[ $# -lt 1 ]]; then
 fi
 game="$(cd "$1" && pwd)"; shift
 
+# Latest nxnative first; new commits make the saved launcher stale, so they force a rebuild
+before="$(git -C "$repo" rev-parse HEAD)"
+if git -C "$repo" pull --ff-only; then
+  if [[ "$(git -C "$repo" rev-parse HEAD)" != "$before" ]]; then
+    echo "nxnative updated, rebuilding"
+    rebuild=1
+  fi
+else
+  echo "nxplay: git pull failed in $repo, going on with the current code" >&2
+fi
+
 # The newest <title ID>_build/start_mac.sh whose Mac host is still there
 find_launcher() {
   local best="" f
