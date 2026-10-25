@@ -1,0 +1,6 @@
+/NXPlay.xcodeproj/
+/build/
+.build/
+.swiftpm/
+xcuserdata/
+.DS_Store

@@ -1,0 +1,77 @@
+import SwiftUI
+
+public struct SettingsView: View {
+    @Environment(Library.self) private var library
+
+    public init() {}
+
+    public var body: some View {
+        @Bindable var library = library
+        Form {
+            Section {
+                LabeledContent("Games folder") {
+                    HStack {
+                        Text(library.root?.path ?? "None")
+                            .foregroundStyle(library.root == nil ? .secondary : .primary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Button("Choose…") { library.chooseRoot() }
+                    }
+                }
+                PathField(
+                    title: "nxnative repository",
+                    path: $library.nxnativePath,
+                    directory: true,
+                    isValid: exists(library.nxnativePath, "scripts/build_ipa_from_nsp.py")
+                )
+                PathField(
+                    title: "prod.keys", path: $library.keysPath, directory: false,
+                    isValid: exists(library.keysPath))
+            } footer: {
+                Text(
+                    "nxplay pulls nxnative before each run and rebuilds a game when new commits arrive."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Show the Metal performance HUD while playing", isOn: $library.metalHUD)
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: 600)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func exists(_ path: String, _ inside: String = "") -> Bool {
+        let base = (path as NSString).expandingTildeInPath
+        return FileManager.default.fileExists(atPath: inside.isEmpty ? base : base + "/" + inside)
+    }
+}
+
+private struct PathField: View {
+    let title: LocalizedStringKey
+    @Binding var path: String
+    let directory: Bool
+    let isValid: Bool
+
+    var body: some View {
+        LabeledContent(title) {
+            HStack {
+                TextField(title, text: $path)
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                Image(
+                    systemName: isValid ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(isValid ? .green : .orange)
+                .help(isValid ? "Found" : "Not found")
+                Button("Choose…") {
+                    if let url = PathPicker.choose(directory: directory, startingAt: path) {
+                        path = url.path
+                    }
+                }
+            }
+        }
+    }
+}

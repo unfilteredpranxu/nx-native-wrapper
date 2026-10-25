@@ -1,0 +1,45 @@
+name: NXPlay
+options:
+  bundleIdPrefix: com.varyform
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  NXPlayKit:
+    path: Packages/NXPlayKit
+
+targets:
+  NXPlay:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - Info.plist
+      - path: nxplay
+        buildPhase: resources
+    dependencies:
+      - package: NXPlayKit
+    settings:
+      base:
+        PRODUCT_NAME: NX Play
+        PRODUCT_BUNDLE_IDENTIFIER: com.varyform.nxplay
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: App/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: NX Play
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
+        # runs nxplay, python, git and the game from the user's folders: no sandbox
+        ENABLE_APP_SANDBOX: NO
+        ENABLE_HARDENED_RUNTIME: NO
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+    scheme:
+      testTargets: []

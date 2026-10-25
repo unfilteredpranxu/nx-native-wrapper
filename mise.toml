@@ -1,0 +1,20 @@
+[tools]
+xcodegen = "2.46.0"
+
+[tasks.generate]
+description = "Generate NXPlay.xcodeproj from project.yml"
+run = "xcodegen generate"
+
+[tasks.test]
+description = "Run the NXPlayKit tests"
+run = "swift test --package-path Packages/NXPlayKit"
+
+[tasks.build]
+description = "Build NX Play.app (Release) into build/"
+depends = ["generate"]
+run = "xcodebuild -project NXPlay.xcodeproj -scheme NXPlay -configuration Release -derivedDataPath build -quiet build"
+
+[tasks.app]
+description = "Build and open NX Play"
+depends = ["build"]
+run = "open 'build/Build/Products/Release/NX Play.app'"

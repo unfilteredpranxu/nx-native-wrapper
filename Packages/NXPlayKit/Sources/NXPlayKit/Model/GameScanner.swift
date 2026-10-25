@@ -1,0 +1,106 @@
+import Foundation
+
+/// Finds the games in a folder laid out the way build_ipa_from_nsp.py leaves it:
+/// `<root>/<game>/*.nsp` and `<root>/<game>/<title ID>_build/extract/v<version>/{icon.jpg,control.nacp}`.
+public enum GameScanner {
+    static let packageExtensions: Set<String> = ["nsp", "nsz", "xci", "xcz"]
+    static let launcherName = "start_mac.sh"
+
+    public static func scan(root: URL) -> [Game] {
+        children(of: root)
+            .compactMap(game(at:))
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    public static func game(at folder: URL) -> Game? {
+        guard isDirectory(folder) else { return nil }
+        let entries = children(of: folder)
+        let hasPackages = entries.contains {
+            packageExtensions.contains($0.pathExtension.lowercased())
+        }
+        let builds = entries.filter(isBuildFolder).map(Build.init(folder:))
+        guard hasPackages || !builds.isEmpty else { return nil }
+
+        // A derived profile can leave a second build folder: take the most finished one, then the newest
+        let build = builds.max { ($0.rank, $0.modified) < ($1.rank, $1.modified) }
+        let nacp = build?.nacpURL.flatMap(NACP.init(contentsOf:))
+        let state: Game.State =
+            build?.isReady == true ? .ready : build?.extract != nil ? .extracted : .notExtracted
+
+        return Game(
+            folder: folder,
+            name: nacp?.title ?? folder.lastPathComponent,
+            titleID: build.map { String($0.folder.lastPathComponent.dropLast("_build".count)) },
+            version: nacp?.displayVersion,
+            iconURL: build?.iconURL,
+            buildFolder: build?.folder,
+            hasPackages: hasPackages,
+            state: state
+        )
+    }
+
+    struct Build {
+        let folder: URL
+        /// The newest `extract/v<version>` (the version the build packs).
+        let extract: URL?
+        let iconURL: URL?
+        let nacpURL: URL?
+        let isReady: Bool
+        let modified: Date
+
+        var rank: Int { isReady ? 2 : extract != nil ? 1 : 0 }
+
+        init(folder: URL) {
+            let fm = FileManager.default
+            let versions = GameScanner.extractVersions(in: folder)
+            func first(_ name: String) -> URL? {
+                versions.lazy.map { $0.appending(path: name) }.first {
+                    fm.fileExists(atPath: $0.path)
+                }
+            }
+            self.folder = folder
+            extract = versions.first
+            iconURL = first("icon.jpg")
+            nacpURL = first("control.nacp")
+            // the same check nxplay makes before it reuses a launcher
+            isReady =
+                fm.fileExists(atPath: folder.appending(path: GameScanner.launcherName).path)
+                && fm.isExecutableFile(atPath: folder.appending(path: "tools/dmhost").path)
+            modified =
+                (try? folder.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate ?? .distantPast
+        }
+    }
+
+    /// `extract/v<number>` folders, newest version first.
+    static func extractVersions(in build: URL) -> [URL] {
+        children(of: build.appending(path: "extract", directoryHint: .isDirectory))
+            .compactMap { url -> (Int, URL)? in
+                let name = url.lastPathComponent
+                guard name.hasPrefix("v"), let version = Int(name.dropFirst()), isDirectory(url)
+                else { return nil }
+                return (version, url)
+            }
+            .sorted { $0.0 > $1.0 }
+            .map(\.1)
+    }
+
+    static func isBuildFolder(_ url: URL) -> Bool {
+        let name = url.lastPathComponent
+        guard name.hasSuffix("_build") else { return false }
+        let id = name.dropLast("_build".count)
+        return id.count == 16 && id.allSatisfy(\.isHexDigit) && isDirectory(url)
+    }
+
+    static func children(of folder: URL) -> [URL] {
+        (try? FileManager.default.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+    }
+
+    static func isDirectory(_ url: URL) -> Bool {
+        (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+    }
+}
