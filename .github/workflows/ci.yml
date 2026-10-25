@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scripts:
+    name: Scripts
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install shellcheck
+      - name: ShellCheck
+        run: shellcheck nxplay bin/*
+      - name: Setup doctor runs
+        # no nxnative, keys or app on the runner: it must report them, not crash
+        run: bin/setup --check || true
+
+  app:
+    name: App
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tests
+        run: swift test --package-path Packages/NXPlayKit
+      - run: brew install xcodegen
+      - name: Build (unsigned)
+        run: bin/build CODE_SIGNING_ALLOWED=NO
+
+  python:
+    name: Python environment
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - name: uv.lock installs
+        run: |
+          uv sync --locked
+          .venv/bin/python3 -c 'import lz4, capstone, fontTools, nsz'

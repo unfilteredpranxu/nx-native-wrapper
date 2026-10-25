@@ -4,3 +4,6 @@
 .swiftpm/
 xcuserdata/
 .DS_Store
+
+/.venv/
+/nxnative/

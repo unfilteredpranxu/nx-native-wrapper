@@ -1,6 +1,16 @@
 import AppKit
 import Foundation
 import Observation
+import SwiftUI
+
+extension View {
+    /// Puts the library in the environment of the app's scenes. Done inside this module: SourceKit-LSP's
+    /// indexing build of NXPlayKit leaves out the conformance @Observable generates, so `.environment(library)`
+    /// in the app target showed a false "requires that 'Library' conform to 'Observable'" in editors.
+    public func library(_ library: Library) -> some View {
+        environment(library)
+    }
+}
 
 /// The app's state: the games folder, its games, and the nxplay jobs. Extractions run one at a time
 /// (each is a full build); plays start at once.
@@ -31,12 +41,12 @@ public final class Library {
     /// The Apple team that signs device installs; empty picks the first paid one Xcode knows.
     public var teamID: String { didSet { defaults.set(teamID, forKey: Keys.team) } }
 
-    public private(set) var teams: [AppleTeam] = []
-    public private(set) var devices: [Device] = []
+    public internal(set) var teams: [AppleTeam] = []
+    public internal(set) var devices: [Device] = []
     public private(set) var isLoadingDevices = false
 
     public private(set) var games: [Game] = []
-    public private(set) var jobs: [Game.ID: Job] = [:]
+    public internal(set) var jobs: [Game.ID: Job] = [:]
     public var selection: Game.ID?
     public var problem: String?
     /// The save transfer sheet, when open.
@@ -45,9 +55,28 @@ public final class Library {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var queue: [Job] = []
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
+    /// Screenshot mode (Screenshots.swift): sample teams and devices that Xcode and devicectl must not replace.
+    @ObservationIgnored let isScreenshot: Bool
+    #if DEBUG
+        /// The scene screenshot mode shows; RootView opens the Settings window for it.
+        var screenshotScene: ScreenshotScene?
+    #endif
 
-    public init(defaults: UserDefaults = .standard) {
+    /// The library the app starts with: a Debug build launched by bin/screenshots shows sample data instead.
+    public static func forLaunch() -> Library {
+        #if DEBUG
+            if let screenshots = Screenshots.fromArguments() { return screenshots.makeLibrary() }
+        #endif
+        return Library()
+    }
+
+    public convenience init(defaults: UserDefaults = .standard) {
+        self.init(defaults: defaults, isScreenshot: false)
+    }
+
+    init(defaults: UserDefaults, isScreenshot: Bool) {
         self.defaults = defaults
+        self.isScreenshot = isScreenshot
         root = defaults.string(forKey: Keys.root).map {
             URL(filePath: $0, directoryHint: .isDirectory)
         }
@@ -73,6 +102,7 @@ public final class Library {
 
     /// Xcode's teams and the reachable devices; on launch, on activation and after an install.
     public func refreshDevices() {
+        guard !isScreenshot else { return }
         teams = AppleTeam.fromXcode()
         guard !isLoadingDevices else { return }
         isLoadingDevices = true
@@ -186,7 +216,8 @@ public final class Library {
             return nil
         }
         let lang = GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? []
-        var environment = NXPlayCommand.environment(nxnative: repo, keys: keys)
+        var environment = NXPlayCommand.environment(
+            nxnative: repo, keys: keys, venv: Self.venv?.path)
         var arguments: [String]
         switch kind {
         case .extract: arguments = ["--build-only", game.folder.path]
@@ -227,11 +258,16 @@ public final class Library {
         return URL(filePath: path, directoryHint: .isDirectory)
     }
 
-    /// nxplay looks for nxnative beside this repository; so does the app.
+    /// Where nxplay looks too: ./nxnative in this checkout (bin/setup clones it there), else beside it.
     static var defaultNXNative: String {
-        sourceRoot?.deletingLastPathComponent().appending(path: "nxnative").path
-            ?? NSHomeDirectory() + "/projects/nxnative"
+        guard let sourceRoot else { return NSHomeDirectory() + "/projects/nxnative" }
+        let inside = sourceRoot.appending(path: "nxnative")
+        return FileManager.default.fileExists(atPath: inside.path)
+            ? inside.path : sourceRoot.deletingLastPathComponent().appending(path: "nxnative").path
     }
+
+    /// The checkout's Python environment (bin/setup: uv sync); the bundled nxplay cannot find it by itself.
+    static var venv: URL? { sourceRoot?.appending(path: ".venv", directoryHint: .isDirectory) }
 
     static var script: URL? {
         Bundle.main.url(forResource: "nxplay", withExtension: nil)

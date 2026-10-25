@@ -4,6 +4,9 @@ import SwiftUI
 /// The main window: the games of the chosen folder above, the selected game's nxplay output below.
 public struct RootView: View {
     @Environment(Library.self) private var library
+    #if DEBUG
+        @Environment(\.openSettings) private var openSettings
+    #endif
 
     public init() {}
 
@@ -11,7 +14,9 @@ public struct RootView: View {
         content
             .frame(minWidth: 720, minHeight: 540)
             .navigationTitle(library.root?.lastPathComponent ?? "NX Play")
-            .navigationSubtitle(library.root?.path ?? "")
+            .navigationSubtitle(
+                library.root.map { ($0.path as NSString).abbreviatingWithTildeInPath } ?? ""
+            )
             .toolbar { toolbar }
             .sheet(item: Bindable(library).transfer) { transfer in
                 TransferSavesView(transfer: transfer)
@@ -27,6 +32,9 @@ public struct RootView: View {
                 library.refresh()
                 library.refreshDevices()
             }
+            #if DEBUG
+                .task { if library.screenshotScene == .settings { openSettings() } }
+            #endif
     }
 
     @ViewBuilder private var content: some View {

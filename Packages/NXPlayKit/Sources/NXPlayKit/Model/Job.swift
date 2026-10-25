@@ -122,6 +122,16 @@ public final class Job: Identifiable {
         if kill(-process.processIdentifier, SIGTERM) != 0 { process.terminate() }
     }
 
+    #if DEBUG
+        /// Screenshot mode: output as if nxplay had printed it, in the given state, without a process.
+        func showScreenshot(_ lines: [String], status: Status) {
+            self.status = .running
+            log.append(["$ " + command.displayLine])
+            received(lines, closed: false)
+            self.status = status
+        }
+    #endif
+
     private func received(_ lines: [String], closed: Bool) {
         if !lines.isEmpty {
             let parsed = lines.map { ansi.parse($0) }
