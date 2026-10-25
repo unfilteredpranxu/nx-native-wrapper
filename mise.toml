@@ -1,5 +1,15 @@
+# Optional: everything also works with the Homebrew tools (Brewfile). With mise, `mise run setup` and friends.
 [tools]
 xcodegen = "2.46.0"
+uv = "0.11.10"
+
+[tasks.setup]
+description = "Check the Mac, install the tools and Python packages, clone nxnative, build and install NX Play"
+run = "bin/setup"
+
+[tasks.doctor]
+description = "Report what the setup is missing, without changing anything"
+run = "bin/setup --check"
 
 [tasks.generate]
 description = "Generate NXPlay.xcodeproj from project.yml"

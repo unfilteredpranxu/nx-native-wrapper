@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # Build NX Play.app (Release) into build/Build/Products/Release.
+# xcodegen comes from mise when it is installed (the version pinned in mise.toml), else from Homebrew (Brewfile).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-mise install --quiet
-mise exec -- xcodegen generate --quiet
+if command -v mise > /dev/null; then
+  mise install --quiet
+  mise exec -- xcodegen generate --quiet
+else
+  xcodegen generate --quiet
+fi
 xcodebuild -project NXPlay.xcodeproj -scheme NXPlay -configuration Release \
-  -destination 'generic/platform=macOS' -derivedDataPath build -quiet build
+  -destination 'generic/platform=macOS' -derivedDataPath build -quiet build "$@"
 
 echo "built: $PWD/build/Build/Products/Release/NX Play.app"

@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# Set up nx-native-wrapper on this Mac; safe to run again. Checks the Mac and Xcode, installs the tools
+# (Homebrew, Brewfile; mise.toml too when mise is there), the Python packages (uv, into .venv), clones
+# nxnative into ./nxnative, then builds NX Play and installs it into /Applications.
+#
+# usage: bin/setup [--check] [--no-app]
+#   --check   only report what is missing; change nothing
+#   --no-app  skip building and installing NX Play
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+check=0 app=1
+for arg in "$@"; do
+  case "$arg" in
+    --check) check=1 ;;
+    --no-app) app=0 ;;
+    *) echo "usage: bin/setup [--check] [--no-app]" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -t 1 ]]; then green=$'\e[32m' yellow=$'\e[33m' red=$'\e[31m' bold=$'\e[1m' reset=$'\e[0m'
+else green="" yellow="" red="" bold="" reset=""; fi
+failures=0
+section() { printf '\n%s%s%s\n' "$bold" "$1" "$reset"; }
+ok() { printf '  %s✓%s %s\n' "$green" "$reset" "$1"; }
+warn() { printf '  %s!%s %s\n' "$yellow" "$reset" "$1"; }
+fail() { printf '  %s✗%s %s\n' "$red" "$reset" "$1"; failures=$(( failures + 1 )); }
+# step <done message> <failure message> <command...>: run it, report either way
+step() {
+  local done="$1" failed="$2"; shift 2
+  if "$@"; then ok "$done"; else fail "$failed"; fi
+}
+
+section "Mac"
+if [[ "$(uname -m)" == arm64 ]]; then ok "Apple silicon"
+else warn "Intel Mac: games cannot run on this Mac (the Mac host needs Apple silicon); IPAs and device installs still work"; fi
+macos="$(sw_vers -productVersion)"
+if (( ${macos%%.*} >= 15 )); then ok "macOS $macos"
+else fail "macOS $macos: NX Play needs macOS 15 or later"; fi
+
+section "Xcode"
+developer="$(xcode-select -p 2>/dev/null || true)"
+if [[ "$developer" == *.app/Contents/Developer ]]; then
+  ok "$(xcodebuild -version 2>/dev/null | head -1) ($developer)"
+  if xcodebuild -checkFirstLaunchStatus > /dev/null 2>&1; then ok "first launch done (license, components)"
+  else fail "Xcode needs its first launch (license, components): sudo xcodebuild -runFirstLaunch"; fi
+  if xcodebuild -showsdks 2>/dev/null | grep -q iphoneos; then ok "iOS platform"
+  else warn "no iOS platform: IPAs and Install on Device need it: xcodebuild -downloadPlatform iOS"; fi
+else
+  fail "Xcode is not selected (${developer:-none}): install it from the App Store, then: sudo xcode-select -s /Applications/Xcode.app"
+fi
+
+section "Tools"
+if ! command -v brew > /dev/null; then
+  fail "Homebrew is not installed: https://brew.sh"
+elif (( check )); then
+  if brew bundle check --file Brewfile --no-upgrade > /dev/null 2>&1; then ok "Homebrew tools (Brewfile)"
+  else fail "Homebrew tools missing: brew bundle --file Brewfile"; fi
+else
+  step "Homebrew tools (Brewfile)" "brew bundle failed" brew bundle --file Brewfile --no-upgrade
+fi
+if command -v mise > /dev/null; then
+  if (( check )); then ok "mise: $(mise --version 2>/dev/null | awk '{print $1}') (mise.toml)"
+  else mise trust --quiet 2>/dev/null; step "mise tools (mise.toml)" "mise install failed" mise install --quiet; fi
+fi
+if dotnet --list-sdks 2>/dev/null | grep -qE '^(1[0-9]|[2-9][0-9])\.'; then ok ".NET SDK $(dotnet --list-sdks | tail -1 | awk '{print $1}')"
+else fail "no .NET 10 SDK (nx_extract needs it): brew install --cask dotnet-sdk"; fi
+
+section "Python (.venv)"
+if ! command -v uv > /dev/null; then
+  fail "uv is not installed: brew install uv"
+elif (( check )); then
+  if .venv/bin/python3 -c 'import lz4, capstone, fontTools, nsz' 2> /dev/null; then ok "$(.venv/bin/python3 --version) with nxnative's packages"
+  else fail "the Python packages are missing: uv sync --locked"; fi
+else
+  if uv sync --locked --quiet; then ok "$(.venv/bin/python3 --version) with nxnative's packages (uv.lock)"
+  else fail "uv sync failed"; fi
+fi
+
+section "nxnative"
+if [[ -n "${NXNATIVE:-}" ]]; then repo="$NXNATIVE"
+elif [[ -d nxnative || ! -d ../nxnative ]]; then repo="nxnative"
+else repo="../nxnative"; fi
+if [[ ! -f "$repo/scripts/build_ipa_from_nsp.py" ]]; then
+  if (( check )); then fail "not cloned at $repo: git clone https://github.com/seedds/nxnative.git nxnative"
+  else step "cloned into $repo" "git clone failed" git clone --quiet https://github.com/seedds/nxnative.git "$repo"; fi
+fi
+if [[ -f "$repo/scripts/build_ipa_from_nsp.py" ]]; then
+  ok "$(cd "$repo" && pwd) ($(git -C "$repo" log -1 --format='%h, %cr'))"
+fi
+
+section "Keys"
+keys="${NX_KEYS:-$HOME/.switch/prod.keys}"
+if [[ -f "$keys" ]]; then ok "prod.keys at $keys"
+else warn "no prod.keys at $keys: dump them from your own Switch and put them there (or choose the file in NX Play's Settings)"; fi
+
+section "NX Play"
+if (( check )); then
+  if [[ -d "/Applications/NX Play.app" ]]; then ok "installed in /Applications"
+  else warn "not installed: bin/install"; fi
+elif (( !app )); then
+  warn "skipped (--no-app): bin/install builds and installs it"
+elif (( failures )); then
+  warn "not built: fix the ✗ above first"
+else
+  step "installed in /Applications" "bin/install failed" bin/install
+fi
+
+echo
+if (( failures )); then
+  echo "${red}$failures problem$( (( failures == 1 )) || echo s) to fix${reset}; then run bin/setup again."
+  exit 1
+fi
+if (( check )); then echo "${green}All set.${reset}"
+else echo "${green}Done.${reset} Open NX Play, choose your games folder (one subfolder per game) and press Play."; fi
