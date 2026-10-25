@@ -2,7 +2,8 @@
 # Start a Switch game on the Mac through nxnative: build it once with
 # scripts/build_ipa_from_nsp.py --platform mac, then reuse the run command the build printed.
 #
-# usage: nxplay [--rebuild] <game folder> [extra build_ipa_from_nsp.py options...]
+# usage: nxplay [--rebuild] [--fps] <game folder> [extra build_ipa_from_nsp.py options...]
+#   --fps  Apple's Metal performance HUD over the game (DM_METAL_HUD=1): frame rate, frame and GPU time, memory
 # env:   NXNATIVE (repository, default ../nxnative beside this script), NX_KEYS (default ~/.switch/prod.keys)
 set -euo pipefail
 
@@ -11,10 +12,16 @@ repo="${NXNATIVE:-$here/../nxnative}"
 keys="${NX_KEYS:-$HOME/.switch/prod.keys}"
 launcher_name=start_mac.sh
 
-rebuild=0
-if [[ "${1:-}" == "--rebuild" ]]; then rebuild=1; shift; fi
+rebuild=0 fps=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --rebuild) rebuild=1; shift ;;
+    --fps) fps=1; shift ;;
+    *) break ;;
+  esac
+done
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") [--rebuild] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  echo "usage: $(basename "$0") [--rebuild] [--fps] <game folder> [build_ipa_from_nsp.py options...]" >&2
   exit 2
 fi
 game="$(cd "$1" && pwd)"; shift
@@ -40,11 +47,16 @@ find_launcher() {
   echo "$best"
 }
 
+start() {
+  if [[ $fps -eq 1 ]]; then export DM_METAL_HUD=1; fi
+  exec bash "$1"
+}
+
 if [[ $rebuild -eq 0 ]]; then
   launcher="$(find_launcher)"
   if [[ -n "$launcher" ]]; then
     echo "already built, starting: $launcher (--rebuild to build again)"
-    exec bash "$launcher"
+    start "$launcher"
   fi
 fi
 
@@ -75,4 +87,4 @@ printf '#!/bin/sh\n# written by nxplay from the build output\n%s\n' "$cmd" > "$l
 chmod +x "$launcher"
 
 echo "saved: $launcher"
-exec bash "$launcher"
+start "$launcher"
