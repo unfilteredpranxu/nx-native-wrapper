@@ -118,11 +118,24 @@ private struct GameStatus: View {
                 job.cancel()
             }
         } else if game.isExtracted {
-            Button("Play", systemImage: "play.fill") { library.play(game) }
+            compactButton("Play", systemImage: "play.fill") { library.play(game) }
                 .buttonStyle(.borderedProminent)
         } else {
-            Button("Extract", systemImage: "square.and.arrow.down") { library.extract(game) }
+            compactButton("Extract", systemImage: "square.and.arrow.down") { library.extract(game) }
                 .disabled(!game.canExtract)
+        }
+    }
+
+    /// Title and icon, or the icon alone when a narrow card has no room for the title beside the badge.
+    private func compactButton(
+        _ title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void
+    ) -> some View {
+        ViewThatFits(in: .horizontal) {
+            Button(title, systemImage: systemImage, action: action)
+                .labelStyle(.titleAndIcon)
+            Button(title, systemImage: systemImage, action: action)
+                .labelStyle(.iconOnly)
+                .help(Text(title))
         }
     }
 
@@ -140,6 +153,8 @@ struct Badge: View {
     var body: some View {
         Text(text)
             .font(.caption.weight(.medium))
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
             .foregroundStyle(color)
