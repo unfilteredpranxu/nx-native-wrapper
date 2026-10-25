@@ -47,12 +47,13 @@ struct GameCard: View {
     @ViewBuilder private var menu: some View {
         let busy = library.isBusy(game)
         if game.isExtracted {
-            Button("Play") { library.play(game) }.disabled(busy)
-            Button("Rebuild") { library.rebuild(game) }.disabled(busy)
+            Button("Play", systemImage: "play.fill") { library.play(game) }.disabled(busy)
+            Button("Rebuild", systemImage: "hammer") { library.rebuild(game) }.disabled(busy)
         } else {
-            Button("Extract") { library.extract(game) }.disabled(busy || !game.canExtract)
+            Button("Extract", systemImage: "square.and.arrow.down") { library.extract(game) }
+                .disabled(busy || !game.canExtract)
         }
-        Menu("Install on Device") {
+        Menu("Install on Device", systemImage: "apps.iphone") {
             if library.devices.isEmpty {
                 Text(
                     library.isLoadingDevices
@@ -60,31 +61,46 @@ struct GameCard: View {
                         : "No device: pair one in Xcode, with Developer Mode on")
             }
             ForEach(library.devices) { device in
-                Button("\(device.name) · \(device.model)") { library.install(game, on: device) }
+                Button(
+                    "\(device.name) · \(device.model)",
+                    systemImage: device.model.contains("iPad") ? "ipad" : "iphone"
+                ) {
+                    library.install(game, on: device)
+                }
             }
             Divider()
-            Button("Look Again") { library.refreshDevices() }
+            Button("Look Again", systemImage: "arrow.clockwise") { library.refreshDevices() }
         }
         .disabled(busy || !game.isExtracted || !game.canBuildIPA)
-        Button(game.ipaURL == nil ? "Build IPA" : "Rebuild IPA") { library.buildIPA(game) }
-            .disabled(busy || !game.canBuildIPA)
-        Button("Transfer Saves…") { library.transferSaves(game) }
-            .disabled(busy || game.titleID == nil || game.buildFolder == nil)
+        Button(game.ipaURL == nil ? "Build IPA" : "Rebuild IPA", systemImage: "shippingbox") {
+            library.buildIPA(game)
+        }
+        .disabled(busy || !game.canBuildIPA)
+        Button("Transfer Saves…", systemImage: "arrow.left.arrow.right") {
+            library.transferSaves(game)
+        }
+        .disabled(busy || game.titleID == nil || game.buildFolder == nil)
         if let job, job.status.isActive {
-            Button(job.kind == .play ? "Stop" : "Cancel") { job.cancel() }
+            if job.kind == .play {
+                Button("Stop", systemImage: "stop.fill") { job.cancel() }
+            } else {
+                Button("Cancel", systemImage: "xmark") { job.cancel() }
+            }
         }
         Divider()
-        Button("Show in Finder") {
+        Button("Show in Finder", systemImage: "folder") {
             NSWorkspace.shared.activateFileViewerSelecting([game.buildFolder ?? game.folder])
         }
         if let ipa = game.ipaURL {
-            Button("Show IPA in Finder") { NSWorkspace.shared.activateFileViewerSelecting([ipa]) }
+            Button("Show IPA in Finder", systemImage: "shippingbox") {
+                NSWorkspace.shared.activateFileViewerSelecting([ipa])
+            }
         }
         if let save = game.saveFolder {
-            Button("Open Save Folder") { NSWorkspace.shared.open(save) }
+            Button("Open Save Folder", systemImage: "tray.full") { NSWorkspace.shared.open(save) }
         }
         if let logs = game.logsFolder {
-            Button("Open Build Logs") { NSWorkspace.shared.open(logs) }
+            Button("Open Build Logs", systemImage: "doc.text") { NSWorkspace.shared.open(logs) }
         }
     }
 }
