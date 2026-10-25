@@ -77,7 +77,8 @@ if [[ -n "$device" ]]; then
   done
   if [[ -z "$project" ]]; then echo "nxplay: --prepare-xcode left no Xcode project in $game" >&2; exit 1; fi
   build="$(dirname "$(dirname "$project")")"
-  scheme="$(basename "$(ls "$project"/xcshareddata/xcschemes/*.xcscheme 2>/dev/null | head -1 || true)" .xcscheme)"
+  schemes=("$project"/xcshareddata/xcschemes/*.xcscheme)   # one per game project: "<game name> (<title ID>)"
+  scheme="$(basename "${schemes[0]}" .xcscheme)"
   app="$build/xcode-derived-data/Build/Products/Release-iphoneos/DmIOS.app"
   xlog="$build/logs/xcode_device.log"
 

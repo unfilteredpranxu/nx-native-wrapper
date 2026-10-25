@@ -7,7 +7,7 @@ dest="${1:-/Applications}"
 app="NX Play.app"
 
 bin/build
-rm -rf "$dest/$app"
+rm -rf "${dest:?}/$app"
 ditto "build/Build/Products/Release/$app" "$dest/$app"
 
 echo "installed: $dest/$app"
