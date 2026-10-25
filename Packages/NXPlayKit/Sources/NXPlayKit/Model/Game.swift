@@ -26,10 +26,15 @@ public struct Game: Identifiable, Hashable, Sendable {
     public var isExtracted: Bool { state != .notExtracted }
     public var canExtract: Bool { state == .notExtracted && hasPackages }
 
-    public var logsFolder: URL? {
-        guard let logs = buildFolder?.appending(path: "logs", directoryHint: .isDirectory),
-            FileManager.default.fileExists(atPath: logs.path)
+    public var logsFolder: URL? { existingFolder("logs") }
+
+    /// The Mac host's save (DM_SAVE in the launcher), kept from run to run.
+    public var saveFolder: URL? { existingFolder("run/save") }
+
+    private func existingFolder(_ path: String) -> URL? {
+        guard let folder = buildFolder?.appending(path: path, directoryHint: .isDirectory),
+            FileManager.default.fileExists(atPath: folder.path)
         else { return nil }
-        return logs
+        return folder
     }
 }

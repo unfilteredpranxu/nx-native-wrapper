@@ -56,6 +56,9 @@ struct GameCard: View {
         Button("Show in Finder") {
             NSWorkspace.shared.activateFileViewerSelecting([game.buildFolder ?? game.folder])
         }
+        if let save = game.saveFolder {
+            Button("Open Save Folder") { NSWorkspace.shared.open(save) }
+        }
         if let logs = game.logsFolder {
             Button("Open Build Logs") { NSWorkspace.shared.open(logs) }
         }
