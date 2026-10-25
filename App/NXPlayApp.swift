@@ -8,7 +8,7 @@ struct NXPlayApp: App {
     var body: some Scene {
         Window("NX Play", id: "main") {
             RootView()
-                .environment(library)
+                .library(library)
         }
         .commands {
             CommandGroup(replacing: .newItem) {
@@ -29,7 +29,7 @@ struct NXPlayApp: App {
 
         Settings {
             SettingsView()
-                .environment(library)
+                .library(library)
         }
     }
 }

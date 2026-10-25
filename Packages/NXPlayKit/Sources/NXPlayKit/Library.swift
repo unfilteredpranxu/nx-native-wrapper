@@ -1,6 +1,16 @@
 import AppKit
 import Foundation
 import Observation
+import SwiftUI
+
+extension View {
+    /// Puts the library in the environment of the app's scenes. Done inside this module: SourceKit-LSP's
+    /// indexing build of NXPlayKit leaves out the conformance @Observable generates, so `.environment(library)`
+    /// in the app target showed a false "requires that 'Library' conform to 'Observable'" in editors.
+    public func library(_ library: Library) -> some View {
+        environment(library)
+    }
+}
 
 /// The app's state: the games folder, its games, and the nxplay jobs. Extractions run one at a time
 /// (each is a full build); plays start at once.
