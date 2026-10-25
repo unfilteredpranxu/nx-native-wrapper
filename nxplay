@@ -48,7 +48,10 @@ game="$(cd "$1" && pwd)"; shift
 before="$(git -C "$repo" rev-parse HEAD)"
 if git -C "$repo" pull --ff-only; then
   if [[ "$(git -C "$repo" rev-parse HEAD)" != "$before" ]]; then
-    echo "nxnative updated, rebuilding"
+    count="$(git -C "$repo" rev-list --count "$before..HEAD")"
+    echo "nxnative updated: $count new commit$([[ $count == 1 ]] || echo s), rebuilding"
+    git -C "$repo" --no-pager log --no-decorate --format='  %C(yellow)%h%C(reset) %s %C(dim)(%an, %ar)%C(reset)' -n 30 "$before..HEAD"
+    if (( count > 30 )); then echo "  … and $(( count - 30 )) older"; fi
     rebuild=1
   fi
 else
