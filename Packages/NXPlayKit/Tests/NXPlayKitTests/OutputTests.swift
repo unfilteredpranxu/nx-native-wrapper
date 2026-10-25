@@ -69,7 +69,7 @@ import Testing
 @Suite struct EnvironmentTests {
     @Test func putsTheToolsFirstAndDropsXcodeInjections() {
         let env = NXPlayCommand.environment(
-            nxnative: "/r", keys: "/k",
+            nxnative: "/r", keys: "/k", venv: "/w/.venv",
             base: [
                 "PATH": "/usr/bin:/opt/homebrew/bin", "DYLD_INSERT_LIBRARIES": "x", "HOME": "/h",
             ],
@@ -81,5 +81,6 @@ import Testing
         )
         #expect(env["DYLD_INSERT_LIBRARIES"] == nil)
         #expect(env["NXNATIVE"] == "/r" && env["NX_KEYS"] == "/k" && env["HOME"] == "/h")
+        #expect(env["NXPLAY_VENV"] == "/w/.venv")
     }
 }

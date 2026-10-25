@@ -1,0 +1,17 @@
+# The Python packages nxnative's build scripts import, kept in this repo's .venv (uv sync) instead of the
+# global Python. nxplay puts .venv/bin first on PATH, so the build script and the shell tools it runs use it.
+[project]
+name = "nx-native-wrapper"
+version = "0.1.0"
+description = "Python environment for nxnative's build scripts, as run by nxplay and NX Play"
+requires-python = ">=3.12"
+dependencies = [
+  "lz4",
+  "capstone",
+  "fonttools",
+  "backports.zstd; python_version < '3.14'",
+  "nsz",                                     # NSZ / XCZ (compressed) game files
+]
+
+[tool.uv]
+package = false

@@ -16,11 +16,13 @@ public struct NXPlayCommand: Sendable {
         (["nxplay"] + arguments).map { $0.contains(" ") ? "'\($0)'" : $0 }.joined(separator: " ")
     }
 
-    /// A Finder-launched app gets launchd's bare PATH: put mise's shims (python3), ~/.local/bin and
-    /// Homebrew (dotnet) in front so nxplay finds the same tools as a terminal.
+    /// A Finder-launched app gets launchd's bare PATH: put mise's shims, ~/.local/bin and Homebrew (dotnet,
+    /// spirv-cross) in front so nxplay finds the same tools as a terminal. The Python packages come from
+    /// this checkout's .venv (NXPLAY_VENV), which nxplay puts before all of them.
     public static func environment(
         nxnative: String,
         keys: String,
+        venv: String? = nil,
         base: [String: String] = ProcessInfo.processInfo.environment,
         home: String = NSHomeDirectory()
     ) -> [String: String] {
@@ -42,6 +44,7 @@ public struct NXPlayCommand: Sendable {
             separator: ":")
         env["NXNATIVE"] = nxnative
         env["NX_KEYS"] = keys
+        if let venv { env["NXPLAY_VENV"] = venv }
         env["PYTHONUNBUFFERED"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
         env["LANG"] = env["LANG"] ?? "en_US.UTF-8"

@@ -186,7 +186,8 @@ public final class Library {
             return nil
         }
         let lang = GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? []
-        var environment = NXPlayCommand.environment(nxnative: repo, keys: keys)
+        var environment = NXPlayCommand.environment(
+            nxnative: repo, keys: keys, venv: Self.venv?.path)
         var arguments: [String]
         switch kind {
         case .extract: arguments = ["--build-only", game.folder.path]
@@ -227,11 +228,16 @@ public final class Library {
         return URL(filePath: path, directoryHint: .isDirectory)
     }
 
-    /// nxplay looks for nxnative beside this repository; so does the app.
+    /// Where nxplay looks too: ./nxnative in this checkout (bin/setup clones it there), else beside it.
     static var defaultNXNative: String {
-        sourceRoot?.deletingLastPathComponent().appending(path: "nxnative").path
-            ?? NSHomeDirectory() + "/projects/nxnative"
+        guard let sourceRoot else { return NSHomeDirectory() + "/projects/nxnative" }
+        let inside = sourceRoot.appending(path: "nxnative")
+        return FileManager.default.fileExists(atPath: inside.path)
+            ? inside.path : sourceRoot.deletingLastPathComponent().appending(path: "nxnative").path
     }
+
+    /// The checkout's Python environment (bin/setup: uv sync); the bundled nxplay cannot find it by itself.
+    static var venv: URL? { sourceRoot?.appending(path: ".venv", directoryHint: .isDirectory) }
 
     static var script: URL? {
         Bundle.main.url(forResource: "nxplay", withExtension: nil)
