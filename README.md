@@ -9,6 +9,16 @@
 
 > You need your own games (NSP, NSZ, XCI or XCZ files) and the `prod.keys` of your own Switch. Nothing here downloads games or keys.
 
+## Why
+
+nxnative can already pack one game into a standalone Mac app (`--platform mac-app`), and [nxnative#104](https://github.com/seedds/nxnative/pull/104) brings a native app bundle with preferences and controller mapping. Those are apps for one game each.
+
+NX Play takes the other route: one app for all your games, everything portable and in one place.
+
+- Each game stays in its own folder: the original files, the build, the saves and the IPA side by side. Move the folder, or the whole library, and it keeps working.
+- Playing on the Mac, installing on an iPhone or iPad, moving saves and freeing space all happen from the same window.
+- Every game follows nxnative as it improves, with no per-game apps to rebuild and replace.
+
 ![NX Play: a game being rebuilt, with nxplay's output below](docs/library.webp)
 
 ## Requirements
