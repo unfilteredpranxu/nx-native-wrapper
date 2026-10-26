@@ -6,6 +6,8 @@ import Observation
 public final class Job: Identifiable {
     public enum Kind: Hashable, Sendable {
         case extract, rebuild, play, ipa
+        /// nxnative's --platform mac-app: a standalone app of the game in its folder.
+        case macApp
         /// Through Xcode: prepare the project, build it signed, install and start it.
         case install(Device)
     }

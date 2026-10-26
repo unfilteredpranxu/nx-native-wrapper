@@ -2,9 +2,11 @@
 # Start a Switch game on the Mac through nxnative: build it once with
 # scripts/build_ipa_from_nsp.py --platform mac, then reuse the run command the build printed.
 #
-# usage: nxplay [--rebuild] [--build-only] [--ipa] [--fps] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
+# usage: nxplay [--rebuild] [--build-only] [--ipa | --mac-app] [--fps] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
 #   --build-only   build (when needed) and save the launcher, without starting the game
 #   --ipa          build the iOS IPA instead, into the game folder (needs the NSPs)
+#   --mac-app      pack a standalone Mac app of the game instead, <game name>.app in the game folder (needs the NSPs);
+#                  it keeps its own save in ~/Library/Application Support/nxnative/<title ID>
 #   --device <udid>  install on a device through Xcode instead: prepare the game's Xcode project, build it signed
 #                  with your team (Xcode > Settings > Apple Accounts), install and start it; pass --team-id <id>
 #                  (and --bundle-id) after the game folder
@@ -29,12 +31,13 @@ else
 fi
 launcher_name=start_mac.sh
 
-rebuild=0 explicit_rebuild=0 fps=0 build_only=0 ipa=0 lang="" device=""
+rebuild=0 explicit_rebuild=0 fps=0 build_only=0 ipa=0 mac_app=0 lang="" device=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --rebuild) rebuild=1 explicit_rebuild=1; shift ;;
     --build-only) build_only=1; shift ;;
     --ipa) ipa=1; shift ;;
+    --mac-app) mac_app=1; shift ;;
     --device) device="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     --fps) fps=1; shift ;;
     --lang) lang="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
@@ -50,7 +53,7 @@ if [[ -n "$device" && ! "$device" =~ ^[0-9A-Fa-f-]+$ ]]; then
   exit 2
 fi
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa | --device <udid>] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa | --mac-app | --device <udid>] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
   exit 2
 fi
 game="$(cd "$1" && pwd)"; shift
@@ -111,6 +114,23 @@ if [[ $ipa -eq 1 ]]; then
   # the script's own default output (<game folder>/<the profile's IPA name>); it reuses every step a Mac build made
   cd "$repo"
   exec python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" ${lang:+--language "$lang"} "$@"
+fi
+
+if [[ $mac_app -eq 1 ]]; then
+  # <game name>.app in the game folder, its files APFS clones of the extracted ones; reuses every step a Mac build made
+  cd "$repo"
+  out="$(mktemp -t nxplay-macapp)"
+  trap 'rm -f "$out"' EXIT
+  pack() { python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --platform mac-app ${lang:+--language "$lang"} "$@" 2>&1 | tee "$out"; return "${PIPESTATUS[0]}"; }
+  if pack "$@"; then exit 0; fi
+  # a game whose shader pairs leave no pipeline base (ANIMAL WELL) stops pso_offline.py with an error instead of
+  # "no archive": pack the app without one (--gpu none); it builds what it needs on its first start
+  if grep -q 'pso_offline: no base to build' "$out"; then
+    echo "nxplay: no pipeline bases to prepare for this game; packing the app without a pipeline archive"
+    pack --gpu none "$@"
+    exit
+  fi
+  exit 1
 fi
 
 # Stage lines in build_ipa_from_nsp.py's format, so the app's progress bar follows these steps too

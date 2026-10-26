@@ -75,6 +75,19 @@ import Testing
         #expect(GameScanner.scan(root: root).first?.isCopying == false)
     }
 
+    @Test func findsTheMacAppNxnativePacked() throws {
+        try touch(root.appending(path: "Metroid/Metroid Dread [010093801237C000][v0].nsp"))
+        try touch(
+            root.appending(path: "Metroid/Metroid Dread.app/Contents/MacOS/dmhost"),
+            executable: true)
+        try touch(
+            root.appending(path: "Metroid/Some Other.app/Contents/MacOS/Some Other"),
+            executable: true)
+
+        #expect(
+            GameScanner.scan(root: root).first?.macAppURL?.lastPathComponent == "Metroid Dread.app")
+    }
+
     @Test func aLauncherWithoutTheMacHostIsNotReady() throws {
         let folder = try build(game: "Metroid", titleID: "010093801237C000", versions: [0])
         try touch(folder.appending(path: "start_mac.sh"))

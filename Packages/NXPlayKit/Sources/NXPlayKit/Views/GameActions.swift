@@ -59,6 +59,14 @@ struct GameActions: View {
                 game.map(library.buildIPA)
             }
             .disabled(busy || game?.canBuildIPA != true)
+            // a standalone app for the Dock and Launchpad; NX Play keeps playing from the folder
+            Button(
+                game?.macAppURL == nil ? "Make Mac App" : "Remake Mac App",
+                systemImage: "macwindow.badge.plus"
+            ) {
+                game.map(library.makeMacApp)
+            }
+            .disabled(busy || game?.isExtracted != true || game?.canBuildFromFiles != true)
             Button("Transfer Saves…", systemImage: "arrow.left.arrow.right") {
                 game.map(library.transferSaves)
             }
@@ -77,6 +85,12 @@ struct GameActions: View {
             if let ipa = game?.ipaURL {
                 Button("Show IPA in Finder", systemImage: "shippingbox") {
                     NSWorkspace.shared.activateFileViewerSelecting([ipa])
+                }
+            }
+            if let app = game?.macAppURL {
+                Button("Open Mac App", systemImage: "macwindow") { NSWorkspace.shared.open(app) }
+                Button("Show Mac App in Finder", systemImage: "macwindow") {
+                    NSWorkspace.shared.activateFileViewerSelecting([app])
                 }
             }
             if let save = game?.saveFolder {

@@ -64,6 +64,7 @@ Extracted games show their icons and a **Play** button; the others have **Extrac
 
 - **Install on Device**: builds the game with Xcode, signed with your team, then installs and starts it on a connected iPhone or iPad. The device must be paired with Xcode and in Developer Mode.
 - **Build IPA**: an unsigned IPA in the game folder, for AltStore, Sideloadly and the like.
+- **Make Mac App**: a standalone, double-clickable app of the game (nxnative's `--platform mac-app`) in the game folder, for the Dock or Launchpad. It's made of APFS clones of the extracted files, so it takes almost no space on the same volume. It keeps its own save in `~/Library/Application Support/nxnative/<title ID>`, separate from NX Play's.
 - **Transfer Saves**: compares the Mac's save with a device's, file by file, and copies one over the other. The replaced save is kept in `<title ID>_build/run/save-backups`.
 - **Show in Finder**, **Open Save Folder**, **Open Build Logs**.
 
@@ -90,6 +91,7 @@ Settings has the nxnative folder, the keys file, the game language, the Apple te
 ./nxplay --rebuild ~/Games/MetroidDread    # force a rebuild
 ./nxplay --build-only ~/Games/MetroidDread # build if needed, don't start
 ./nxplay --ipa ~/Games/MetroidDread        # build the iOS IPA into the game folder, to sideload
+./nxplay --mac-app ~/Games/MetroidDread    # pack a standalone Mac app of the game into its folder
 ./nxplay --device <udid> ~/Games/MetroidDread --team-id <team>   # build with Xcode, install and start on a device
 ./nxplay --fps ~/Games/MetroidDread        # show the Metal performance HUD
 ./nxplay --lang ja ~/Games/MetroidDread    # play in another language (DM_LANG), no rebuild

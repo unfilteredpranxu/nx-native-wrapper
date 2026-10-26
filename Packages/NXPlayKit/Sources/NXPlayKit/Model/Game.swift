@@ -25,6 +25,8 @@ public struct Game: Identifiable, Hashable, Sendable {
     /// Stored, not looked up when asked: a card redraws only when its Game changes, so a value read from disk
     /// on the fly kept showing a removed build.
     public let xcodeBuildFolder: URL?
+    /// The standalone Mac app Make Mac App packed into the game folder (nxnative's --platform mac-app).
+    public var macAppURL: URL? = nil
     public let hasPackages: Bool
     /// A game file Finder is still copying into the folder: nothing may build from it until it's complete.
     public var isCopying = false

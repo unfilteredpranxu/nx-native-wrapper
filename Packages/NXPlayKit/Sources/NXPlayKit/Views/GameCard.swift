@@ -72,6 +72,8 @@ struct GameBadge: View {
             Badge(text: job?.isBuilding == true ? "Building" : "Running", color: .green)
         case (.running?, .ipa?):
             Badge(text: "Building IPA", color: .blue)
+        case (.running?, .macApp?):
+            Badge(text: "Making App", color: .blue)
         case (.running?, .install?):
             Badge(text: "Installing", color: .blue)
         case (.running?, _):
@@ -83,13 +85,17 @@ struct GameBadge: View {
         default:
             if game.isCopying {
                 Badge(text: "Copying…", color: .orange)
-                    .help("Finder is still copying a game file here; NX Play waits until it's complete.")
+                    .help(
+                        "Finder is still copying a game file here; NX Play waits until it's complete."
+                    )
             } else {
                 switch game.state {
                 case .ready: Badge(text: "Ready", color: .green)
                 case .extracted: Badge(text: "Extracted", color: .blue)
                 case .notExtracted:
-                    Badge(text: game.hasPackages ? "Not extracted" : "No NSP files", color: .secondary)
+                    Badge(
+                        text: game.hasPackages ? "Not extracted" : "No NSP files", color: .secondary
+                    )
                 }
             }
         }
@@ -160,6 +166,13 @@ struct IconBadges: View {
 
     var body: some View {
         HStack(spacing: 4) {
+            if let app = game.macAppURL {
+                IconBadge(
+                    text: "App", color: .teal,
+                    help:
+                        "\(app.lastPathComponent): a standalone Mac app of the game, with its own save in ~/Library/Application Support/nxnative."
+                )
+            }
             if let xcode = game.xcodeBuildFolder {
                 IconBadge(
                     text: "Xcode", color: .indigo,

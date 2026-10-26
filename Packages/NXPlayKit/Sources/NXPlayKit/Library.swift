@@ -174,6 +174,7 @@ public final class Library {
     public func extract(_ game: Game) { run(.extract, game) }
     public func rebuild(_ game: Game) { run(.rebuild, game) }
     public func buildIPA(_ game: Game) { run(.ipa, game) }
+    public func makeMacApp(_ game: Game) { run(.macApp, game) }
     public func install(_ game: Game, on device: Device) { run(.install(device), game) }
 
     /// Opens the save transfer for a game; the copy NX Play installs is preferred when a device has several.
@@ -210,10 +211,12 @@ public final class Library {
 
     func finished(_ job: Job) {
         refresh()
-        if job.kind == .ipa, job.status == .succeeded,
-            let ipa = games.first(where: { $0.id == job.game.id })?.ipaURL
+        // what was made, in Finder
+        let made = games.first { $0.id == job.game.id }
+        if job.status == .succeeded,
+            let file = job.kind == .ipa ? made?.ipaURL : job.kind == .macApp ? made?.macAppURL : nil
         {
-            NSWorkspace.shared.activateFileViewerSelecting([ipa])
+            NSWorkspace.shared.activateFileViewerSelecting([file])
         }
         if case .install = job.kind { refreshDevices() }
         // a failure's reason is in its output: show it
@@ -263,6 +266,7 @@ public final class Library {
         case .extract: arguments = ["--build-only", game.folder.path]
         case .rebuild: arguments = ["--rebuild", "--build-only", game.folder.path]
         case .ipa: arguments = ["--ipa"] + lang + [game.folder.path]
+        case .macApp: arguments = ["--mac-app"] + lang + [game.folder.path]
         case .play: arguments = (metalHUD ? ["--fps"] : []) + lang + [game.folder.path]
         case .install(let device):
             guard let team, let titleID = game.titleID else {

@@ -39,6 +39,13 @@ public enum GameScanner {
                 $0.folder.appending(path: "xcode-derived-data", directoryHint: .isDirectory)
             }
             .flatMap { isDirectory($0) ? $0 : nil },
+            // nxnative's app: <game name>.app with its Mac host inside (not any app that happens to be there)
+            macAppURL: newest(
+                entries.filter {
+                    $0.pathExtension == "app"
+                        && FileManager.default.isExecutableFile(
+                            atPath: $0.appending(path: "Contents/MacOS/dmhost").path)
+                }),
             hasPackages: hasPackages,
             // a copied folder carries the mark on itself, a copied file on itself
             isCopying: isBeingCopied(folder) || packages.contains(where: isBeingCopied),
