@@ -1,9 +1,18 @@
 name: CI
 
+# Text and screenshots only: nothing CI checks changes
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - LICENSE
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - LICENSE
 
 concurrency:
   group: ci-${{ github.ref }}
