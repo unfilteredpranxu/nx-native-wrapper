@@ -26,6 +26,7 @@ public final class Library {
         static let showsLog = "showsLog"
         static let logHeight = "logHeight"
         static let viewStyle = "viewStyle"
+        static let fullScreenGames = "fullScreenGames"
     }
 
     /// The games as cards with their icons, or as a sortable list.
@@ -44,6 +45,10 @@ public final class Library {
     public var keysPath: String { didSet { defaults.set(keysPath, forKey: Keys.keys) } }
     /// Play with Apple's Metal performance HUD (nxplay --fps).
     public var metalHUD: Bool { didSet { defaults.set(metalHUD, forKey: Keys.metalHUD) } }
+    /// Start games in full screen (nxplay --fullscreen); always from Console Mode.
+    public var fullScreenGames: Bool {
+        didSet { defaults.set(fullScreenGames, forKey: Keys.fullScreenGames) }
+    }
     /// Preferred game language (a DM_LANG code); empty keeps each game's build language.
     public var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
     /// The Apple team that signs device installs; empty picks the first paid one Xcode knows.
@@ -66,6 +71,10 @@ public final class Library {
     public var problem: String?
     /// The save transfer sheet, when open.
     public var transfer: SaveTransfer?
+    /// Console Mode: the window full screen, the games as a carousel for the couch and a controller.
+    public var consoleMode = false
+    /// The controller as a remote: moves the selection, plays, toggles Console Mode.
+    public let gamepad = Gamepad()
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var queue: [Job] = []
@@ -98,6 +107,7 @@ public final class Library {
         nxnativePath = defaults.string(forKey: Keys.nxnative) ?? Self.defaultNXNative
         keysPath = defaults.string(forKey: Keys.keys) ?? NSHomeDirectory() + "/.switch/prod.keys"
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
+        fullScreenGames = defaults.bool(forKey: Keys.fullScreenGames)
         language = defaults.string(forKey: Keys.language) ?? ""
         teamID = defaults.string(forKey: Keys.team) ?? ""
         showsLog = defaults.object(forKey: Keys.showsLog) as? Bool ?? true
@@ -109,6 +119,7 @@ public final class Library {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.stopAll() }
         }
+        gamepad.onCommand = { [weak self] in self?.handle($0) }
         refresh()
         refreshDevices()
     }
@@ -185,6 +196,48 @@ public final class Library {
             bundleID = Self.bundleID(titleID: titleID, team: team)
         }
         transfer = SaveTransfer(game: game, preferredBundleID: bundleID)
+    }
+
+    // MARK: - Navigation (controller, Console Mode keys)
+
+    /// The games in the order the grid shows them, extracted first, then the rest; Console Mode only has the
+    /// extracted ones, the games it can play.
+    public var navigableGames: [Game] {
+        consoleMode
+            ? games.filter(\.isExtracted)
+            : games.filter(\.isExtracted) + games.filter { !$0.isExtracted }
+    }
+
+    /// One step through the games; with nothing selected, the first one.
+    func move(_ step: Int) {
+        let games = navigableGames
+        guard !games.isEmpty else { return }
+        guard let index = games.firstIndex(where: { $0.id == selection }) else {
+            selection = games.first?.id
+            return
+        }
+        selection = games[min(max(index + step, 0), games.count - 1)].id
+    }
+
+    func handle(_ command: Gamepad.Command) {
+        switch command {
+        case .left, .up: move(-1)
+        case .right, .down: move(1)
+        case .confirm:
+            // Play, or Extract when it can; nothing while the game is busy or still copying
+            guard let game = selectedGame, !isBusy(game), game.isExtracted || game.canExtract else {
+                return
+            }
+            primaryAction(for: game)
+        case .back:
+            if transfer != nil { transfer = nil } else if consoleMode { consoleMode = false }
+        case .menu:
+            consoleMode.toggle()
+            // the carousel has no unextracted games: don't leave one selected in it
+            if consoleMode, selectedGame?.isExtracted != true {
+                selection = navigableGames.first?.id
+            }
+        }
     }
 
     public func extractAll() {
@@ -267,7 +320,11 @@ public final class Library {
         case .rebuild: arguments = ["--rebuild", "--build-only", game.folder.path]
         case .ipa: arguments = ["--ipa"] + lang + [game.folder.path]
         case .macApp: arguments = ["--mac-app"] + lang + [game.folder.path]
-        case .play: arguments = (metalHUD ? ["--fps"] : []) + lang + [game.folder.path]
+        case .play:
+            arguments =
+                (metalHUD ? ["--fps"] : [])
+                + (fullScreenGames || consoleMode ? ["--fullscreen"] : [])
+                + lang + [game.folder.path]
         case .install(let device):
             guard let team, let titleID = game.titleID else {
                 problem =

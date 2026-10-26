@@ -46,6 +46,9 @@ public struct SettingsView: View {
                     }
                 }
                 Toggle("Show the Metal performance HUD while playing", isOn: $library.metalHUD)
+                Toggle(
+                    "Start games in full screen (always from Console Mode)",
+                    isOn: $library.fullScreenGames)
             } footer: {
                 Text(
                     "Sets DM_LANG when a game starts. A game without the language gets the same language for another region, or keeps its build's."

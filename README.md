@@ -80,6 +80,8 @@ Pick files one by one, a whole game, or a whole kind. Nothing is selected until 
 
 Settings has the nxnative folder, the keys file, the game language, the Apple team for device installs, and Apple's Metal performance HUD. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls.
 
+**On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen, with the games ready to play as a carousel of their artwork, the clock, and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
+
 <img src="docs/settings.webp" alt="NX Play's Settings" width="560">
 
 ## Command line
@@ -94,6 +96,7 @@ Settings has the nxnative folder, the keys file, the game language, the Apple te
 ./nxplay --mac-app ~/Games/MetroidDread    # pack a standalone Mac app of the game into its folder
 ./nxplay --device <udid> ~/Games/MetroidDread --team-id <team>   # build with Xcode, install and start on a device
 ./nxplay --fps ~/Games/MetroidDread        # show the Metal performance HUD
+./nxplay --fullscreen ~/Games/MetroidDread # start the game in full screen
 ./nxplay --lang ja ~/Games/MetroidDread    # play in another language (DM_LANG), no rebuild
 ./nxplay ~/Games/MetroidDread -l ja        # extra options go to build_ipa_from_nsp.py
 ```

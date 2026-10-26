@@ -11,27 +11,33 @@ struct GameGrid: View {
     var body: some View {
         let extracted = library.games.filter(\.isExtracted)
         let remaining = library.games.filter { !$0.isExtracted }
-        ScrollView {
-            if library.games.isEmpty {
-                ContentUnavailableView(
-                    "No Games",
-                    systemImage: "gamecontroller",
-                    description: Text("No subfolder here holds NSP, NSZ, XCI or XCZ files.")
-                )
-                .padding(.top, 40)
-            } else {
-                LazyVStack(alignment: .leading, spacing: 28) {
-                    if !extracted.isEmpty {
-                        section("Extracted", extracted)
+        ScrollViewReader { proxy in
+            ScrollView {
+                if library.games.isEmpty {
+                    ContentUnavailableView(
+                        "No Games",
+                        systemImage: "gamecontroller",
+                        description: Text("No subfolder here holds NSP, NSZ, XCI or XCZ files.")
+                    )
+                    .padding(.top, 40)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 28) {
+                        if !extracted.isEmpty {
+                            section("Extracted", extracted)
+                        }
+                        if !remaining.isEmpty {
+                            section("Not Extracted", remaining, extractAll: true)
+                        }
                     }
-                    if !remaining.isEmpty {
-                        section("Not Extracted", remaining, extractAll: true)
-                    }
+                    .padding(20)
                 }
-                .padding(20)
+            }
+            .background(.background)
+            // a controller moves the selection: keep it in view
+            .onChange(of: library.selection) {
+                withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(library.selection) }
             }
         }
-        .background(.background)
     }
 
     private func section(_ title: LocalizedStringKey, _ games: [Game], extractAll: Bool = false)
@@ -51,7 +57,9 @@ struct GameGrid: View {
                 ForEach(games) { game in
                     GameCard(
                         game: game, job: library.job(for: game),
-                        isSelected: library.selection == game.id)
+                        isSelected: library.selection == game.id
+                    )
+                    .id(game.id)
                 }
             }
         }

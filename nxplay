@@ -2,7 +2,7 @@
 # Start a Switch game on the Mac through nxnative: build it once with
 # scripts/build_ipa_from_nsp.py --platform mac, then reuse the run command the build printed.
 #
-# usage: nxplay [--rebuild] [--build-only] [--ipa | --mac-app] [--fps] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
+# usage: nxplay [--rebuild] [--build-only] [--ipa | --mac-app] [--fps] [--fullscreen] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
 #   --build-only   build (when needed) and save the launcher, without starting the game
 #   --ipa          build the iOS IPA instead, into the game folder (needs the NSPs)
 #   --mac-app      pack a standalone Mac app of the game instead, <game name>.app in the game folder (needs the NSPs);
@@ -11,6 +11,7 @@
 #                  with your team (Xcode > Settings > Apple Accounts), install and start it; pass --team-id <id>
 #                  (and --bundle-id) after the game folder
 #   --fps          Apple's Metal performance HUD over the game (DM_METAL_HUD=1): frame rate, frame and GPU time, memory
+#   --fullscreen   start the game's window in full screen (DM_FULLSCREEN=1); ⌃⌘F or the green button leave it
 #   --lang <code>  game language for this run (DM_LANG: en-US, ja, fr, de, zh-Hans, ...); it must be one the game has
 # env:   NXNATIVE (repository; default ./nxnative in this checkout, as bin/setup clones it, else ../nxnative beside it),
 #        NXPLAY_VENV (Python environment; default .venv in this checkout, made by bin/setup), NX_KEYS (default ~/.switch/prod.keys)
@@ -31,7 +32,7 @@ else
 fi
 launcher_name=start_mac.sh
 
-rebuild=0 explicit_rebuild=0 fps=0 build_only=0 ipa=0 mac_app=0 lang="" device=""
+rebuild=0 explicit_rebuild=0 fps=0 fullscreen=0 build_only=0 ipa=0 mac_app=0 lang="" device=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --rebuild) rebuild=1 explicit_rebuild=1; shift ;;
@@ -40,6 +41,7 @@ while [[ $# -gt 0 ]]; do
     --mac-app) mac_app=1; shift ;;
     --device) device="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     --fps) fps=1; shift ;;
+    --fullscreen) fullscreen=1; shift ;;
     --lang) lang="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     *) break ;;
   esac
@@ -53,7 +55,7 @@ if [[ -n "$device" && ! "$device" =~ ^[0-9A-Fa-f-]+$ ]]; then
   exit 2
 fi
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa | --mac-app | --device <udid>] [--fps] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa | --mac-app | --device <udid>] [--fps] [--fullscreen] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
   exit 2
 fi
 game="$(cd "$1" && pwd)"; shift
@@ -228,6 +230,7 @@ PY
 start() {
   if [[ $build_only -eq 1 ]]; then exit 0; fi
   if [[ $fps -eq 1 ]]; then export DM_METAL_HUD=1; fi
+  if [[ $fullscreen -eq 1 ]]; then export DM_FULLSCREEN=1; fi
   if [[ -n "$lang" ]]; then
     # the launcher sets DM_LANG inline, which beats the environment: swap the value in its command
     echo "game language: $lang"

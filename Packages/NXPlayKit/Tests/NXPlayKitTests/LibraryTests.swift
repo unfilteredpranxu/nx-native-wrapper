@@ -36,6 +36,61 @@ import Testing
         #expect(library.selection == "/games/Broken")
     }
 
+    @Test func theControllerMovesThroughTheGamesInGridOrder() throws {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "nxplay-nav-\(UUID().uuidString)")
+        for (folder, built) in [
+            ("A Fresh", false), ("B Built", true), ("C Fresh", false), ("D Built", true),
+        ] {
+            let game = root.appending(path: folder)
+            try FileManager.default.createDirectory(at: game, withIntermediateDirectories: true)
+            try Data([1]).write(to: game.appending(path: "\(folder).nsp"))
+            if built {
+                let extract = game.appending(path: "0100000000010000_build/extract/v0")
+                try FileManager.default.createDirectory(
+                    at: extract, withIntermediateDirectories: true)
+            }
+        }
+        let library = library()
+        library.root = root
+        let names = { library.selectedGame?.folder.lastPathComponent }
+
+        // extracted games first, as the grid's sections and the carousel show them
+        #expect(
+            library.navigableGames.map(\.folder.lastPathComponent) == [
+                "B Built", "D Built", "A Fresh", "C Fresh",
+            ])
+        library.handle(.right)
+        #expect(names() == "B Built")  // nothing selected: the first
+        library.handle(.down)
+        library.handle(.right)
+        #expect(names() == "A Fresh")
+        for _ in 0..<5 { library.handle(.right) }
+        #expect(names() == "C Fresh")  // stops at the end
+        for _ in 0..<9 { library.handle(.left) }
+        #expect(names() == "B Built")
+
+        // Console Mode has only the games it can play; an unextracted selection moves to the first of them
+        library.handle(.right)
+        library.handle(.right)
+        #expect(names() == "A Fresh")
+        library.handle(.menu)
+        #expect(library.navigableGames.map(\.folder.lastPathComponent) == ["B Built", "D Built"])
+        #expect(names() == "B Built")
+        for _ in 0..<5 { library.handle(.right) }
+        #expect(names() == "D Built")
+    }
+
+    @Test func menuTogglesConsoleModeAndBackLeavesIt() {
+        let library = library()
+        library.handle(.menu)
+        #expect(library.consoleMode)
+        library.handle(.back)
+        #expect(!library.consoleMode)
+        library.handle(.confirm)  // no games: nothing to start
+        #expect(library.jobs.isEmpty)
+    }
+
     @Test func theLogStateIsRemembered() {
         let suite = "nxplay-tests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

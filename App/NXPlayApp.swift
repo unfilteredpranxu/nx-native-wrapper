@@ -23,6 +23,8 @@ struct NXPlayApp: App {
                 Divider()
                 LogMenuItem()
                     .library(library)
+                ConsoleMenuItem()
+                    .library(library)
                 Divider()
             }
             CommandGroup(before: .help) {

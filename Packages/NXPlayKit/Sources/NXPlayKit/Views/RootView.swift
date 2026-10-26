@@ -18,6 +18,12 @@ public struct RootView: View {
                 library.root.map { ($0.path as NSString).abbreviatingWithTildeInPath } ?? ""
             )
             .toolbar { toolbar }
+            .toolbar(library.consoleMode ? .hidden : .visible, for: .windowToolbar)
+            .background(
+                ConsoleWindowController(consoleMode: library.consoleMode) {
+                    library.consoleMode = false
+                }
+            )
             .sheet(item: Bindable(library).transfer) { transfer in
                 TransferSavesView(transfer: transfer)
             }
@@ -49,6 +55,9 @@ public struct RootView: View {
                 Button("Choose Folder…") { library.chooseRoot() }
                     .buttonStyle(.borderedProminent)
             }
+        } else if library.consoleMode {
+            ConsoleView()
+                .transition(.opacity)
         } else {
             LogSplit()
         }
@@ -59,6 +68,7 @@ public struct RootView: View {
             ViewStylePicker()
         }
         ToolbarItemGroup {
+            ConsoleToggle()
             LogToggle()
             Button {
                 library.chooseRoot()
