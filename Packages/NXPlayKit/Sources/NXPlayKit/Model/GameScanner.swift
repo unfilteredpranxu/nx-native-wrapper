@@ -40,15 +40,17 @@ public enum GameScanner {
             }
             .flatMap { isDirectory($0) ? $0 : nil },
             hasPackages: hasPackages,
-            isCopying: packages.contains(where: isBeingCopied),
+            // a copied folder carries the mark on itself, a copied file on itself
+            isCopying: isBeingCopied(folder) || packages.contains(where: isBeingCopied),
             state: state
         )
     }
 
-    /// Finder dates a file it is still copying 24 January 1984 (the Mac's launch day) and puts the source's
-    /// creation date back when the copy is complete; no real game file is that old. A day either side covers
-    /// the time zone. Other copies leave no such mark: browsers and torrent clients use another extension
-    /// until a file is complete, rsync a hidden name, and cp nothing at all.
+    /// Finder dates what it is still copying 24 January 1984 (the Mac's launch day) and puts the source's
+    /// creation date back when the copy is complete; nothing real is that old. Only the item dragged gets the
+    /// mark: a copied game folder carries it while the files inside have today's date, a copied file carries it
+    /// itself. A day either side covers the time zone. Other copies leave no such mark: browsers and torrent
+    /// clients use another extension until a file is complete, rsync a hidden name, and cp nothing at all.
     static func isBeingCopied(_ url: URL) -> Bool {
         guard let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
         else { return false }

@@ -61,6 +61,20 @@ import Testing
         #expect(!done.isCopying && done.canExtract)
     }
 
+    @Test func aFolderFinderIsStillCopyingHoldsTheGameBack() throws {
+        // a dragged game folder: Finder marks the folder, while the file inside has today's date (seen with
+        // Streets of Rage 4)
+        let folder = root.appending(path: "Streets of Rage 4 [NSP]")
+        try touch(folder.appending(path: "Streets of Rage 4 [0100EC9010258000][v0].nsp"))
+        let copying = ISO8601DateFormatter().date(from: "1984-01-24T08:00:00Z")!
+        try FileManager.default.setAttributes([.creationDate: copying], ofItemAtPath: folder.path)
+
+        #expect(GameScanner.scan(root: root).first?.isCopying == true)
+
+        try FileManager.default.setAttributes([.creationDate: Date.now], ofItemAtPath: folder.path)
+        #expect(GameScanner.scan(root: root).first?.isCopying == false)
+    }
+
     @Test func aLauncherWithoutTheMacHostIsNotReady() throws {
         let folder = try build(game: "Metroid", titleID: "010093801237C000", versions: [0])
         try touch(folder.appending(path: "start_mac.sh"))

@@ -12,7 +12,7 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 - **Show or hide the log** with the toolbar button or View › Show Log (⇧⌘Y). The log opens by itself, on the failed game, when a build or game fails. NX Play remembers whether it's shown and how tall you dragged it.
 - `bin/setup` downloads Xcode's Metal Toolchain when it's missing, since every build compiles shaders with it; `bin/setup --check` reports it.
 
-- **Copying…** badge on a game while Finder is still copying one of its files into the folder. Extract, Rebuild, Install on Device and Build IPA wait until the copy is complete, and the card updates by itself when it is.
+- **Copying…** badge on a game while Finder is still copying it in, either the whole game folder or one of its files. Extract, Rebuild, Install on Device and Build IPA wait until the copy is complete, and the card updates by itself when it is.
 
 ### Changed
 
