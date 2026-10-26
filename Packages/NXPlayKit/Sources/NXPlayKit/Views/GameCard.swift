@@ -33,76 +33,13 @@ struct GameCard: View {
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .onTapGesture(count: 2) { library.primaryAction(for: game) }
         .simultaneousGesture(TapGesture().onEnded { library.selection = game.id })
-        // macOS menus show only titles unless the label style asks for the icons too
-        .contextMenu { menu.labelStyle(.titleAndIcon) }
+        .contextMenu { GameActions(game: game) }
         .help(game.folder.path)
     }
 
     private var subtitle: String {
         let parts = [game.version.map { "v\($0)" }, game.titleID].compactMap(\.self)
         return parts.isEmpty ? game.folder.lastPathComponent : parts.joined(separator: " · ")
-    }
-
-    @ViewBuilder private var menu: some View {
-        let busy = library.isBusy(game)
-        if game.isExtracted {
-            Button("Play", systemImage: "play.fill") { library.play(game) }.disabled(busy)
-            // a game whose original files were removed plays its build but cannot be rebuilt
-            Button("Rebuild", systemImage: "hammer") { library.rebuild(game) }.disabled(
-                busy || !game.hasPackages)
-        } else {
-            Button("Extract", systemImage: "square.and.arrow.down") { library.extract(game) }
-                .disabled(busy || !game.canExtract)
-        }
-        Menu("Install on Device", systemImage: "apps.iphone") {
-            if library.devices.isEmpty {
-                Text(
-                    library.isLoadingDevices
-                        ? "Looking for devices…"
-                        : "No device: pair one in Xcode, with Developer Mode on")
-            }
-            ForEach(library.devices) { device in
-                Button(
-                    "\(device.name) · \(device.model)",
-                    systemImage: device.model.contains("iPad") ? "ipad" : "iphone"
-                ) {
-                    library.install(game, on: device)
-                }
-            }
-            Divider()
-            Button("Look Again", systemImage: "arrow.clockwise") { library.refreshDevices() }
-        }
-        .disabled(busy || !game.isExtracted || !game.canBuildIPA)
-        Button(game.ipaURL == nil ? "Build IPA" : "Rebuild IPA", systemImage: "shippingbox") {
-            library.buildIPA(game)
-        }
-        .disabled(busy || !game.canBuildIPA)
-        Button("Transfer Saves…", systemImage: "arrow.left.arrow.right") {
-            library.transferSaves(game)
-        }
-        .disabled(busy || game.titleID == nil || game.buildFolder == nil)
-        if let job, job.status.isActive {
-            if job.kind == .play {
-                Button("Stop", systemImage: "stop.fill") { job.cancel() }
-            } else {
-                Button("Cancel", systemImage: "xmark") { job.cancel() }
-            }
-        }
-        Divider()
-        Button("Show in Finder", systemImage: "folder") {
-            NSWorkspace.shared.activateFileViewerSelecting([game.buildFolder ?? game.folder])
-        }
-        if let ipa = game.ipaURL {
-            Button("Show IPA in Finder", systemImage: "shippingbox") {
-                NSWorkspace.shared.activateFileViewerSelecting([ipa])
-            }
-        }
-        if let save = game.saveFolder {
-            Button("Open Save Folder", systemImage: "tray.full") { NSWorkspace.shared.open(save) }
-        }
-        if let logs = game.logsFolder {
-            Button("Open Build Logs", systemImage: "doc.text") { NSWorkspace.shared.open(logs) }
-        }
     }
 }
 

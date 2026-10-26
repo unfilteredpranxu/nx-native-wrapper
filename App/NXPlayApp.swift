@@ -20,6 +20,10 @@ struct NXPlayApp: App {
             CommandGroup(before: .help) {
                 ControlsButton()
             }
+            CommandMenu("Game") {
+                GameMenu()
+                    .library(library)
+            }
             CommandMenu("Tools") {
                 ToolsMenu()
             }
