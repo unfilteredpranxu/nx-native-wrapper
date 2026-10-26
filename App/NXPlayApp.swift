@@ -18,6 +18,9 @@ struct NXPlayApp: App {
                     .keyboardShortcut("r")
             }
             CommandGroup(before: .toolbar) {
+                ViewStyleMenuItems()
+                    .library(library)
+                Divider()
                 LogMenuItem()
                     .library(library)
                 Divider()

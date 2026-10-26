@@ -16,8 +16,13 @@ struct LogSplit: View {
         GeometryReader { geometry in
             let height = clamped(dragHeight ?? library.logHeight, in: geometry.size.height)
             VStack(spacing: 0) {
-                GameGrid()
-                    .frame(maxHeight: .infinity)
+                Group {
+                    switch library.viewStyle {
+                    case .grid: GameGrid()
+                    case .list: GameList()
+                    }
+                }
+                .frame(maxHeight: .infinity)
                 if library.showsLog {
                     divider(in: geometry.size.height)
                     LogPanel()

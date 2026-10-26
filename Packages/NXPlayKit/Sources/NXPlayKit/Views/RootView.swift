@@ -55,6 +55,9 @@ public struct RootView: View {
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            ViewStylePicker()
+        }
         ToolbarItemGroup {
             LogToggle()
             Button {

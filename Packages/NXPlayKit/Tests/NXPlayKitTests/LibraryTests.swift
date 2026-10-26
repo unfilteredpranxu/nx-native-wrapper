@@ -40,11 +40,12 @@ import Testing
         let suite = "nxplay-tests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         let first = Library(defaults: defaults, isScreenshot: true)
-        #expect(first.showsLog && first.logHeight == 240)  // defaults
+        #expect(first.showsLog && first.logHeight == 240 && first.viewStyle == .grid)  // defaults
         first.showsLog = false
         first.logHeight = 333
+        first.viewStyle = .list
 
         let next = Library(defaults: defaults, isScreenshot: true)
-        #expect(!next.showsLog && next.logHeight == 333)
+        #expect(!next.showsLog && next.logHeight == 333 && next.viewStyle == .list)
     }
 }

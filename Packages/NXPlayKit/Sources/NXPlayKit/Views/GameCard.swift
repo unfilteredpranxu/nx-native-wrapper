@@ -47,30 +47,26 @@ struct GameCard: View {
 private struct GameStatus: View {
     let game: Game
     let job: Job?
-    @Environment(Library.self) private var library
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                badge
+                GameBadge(game: game, job: job)
                 Spacer(minLength: 4)
-                action
+                GameActionButton(game: game, job: job)
             }
             .controlSize(.small)
-            if let job, job.status.isActive, job.kind != .play || job.isBuilding {
-                ProgressView(value: job.status == .queued ? 0 : job.progress?.fraction ?? 0)
-                    .controlSize(.small)
-                Text(
-                    job.status == .queued ? "Waiting for the current build" : stageText(job)
-                )
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            }
+            JobProgress(job: job)
         }
     }
+}
 
-    @ViewBuilder private var badge: some View {
+/// The game's state, or what its job is doing: the card's and the list's status.
+struct GameBadge: View {
+    let game: Game
+    let job: Job?
+
+    var body: some View {
         switch (job?.status, job?.kind) {
         case (.running?, .play?):
             Badge(text: job?.isBuilding == true ? "Building" : "Running", color: .green)
@@ -87,25 +83,26 @@ private struct GameStatus: View {
         default:
             if game.isCopying {
                 Badge(text: "Copying…", color: .orange)
-                    .help(
-                        "Finder is still copying a game file here; NX Play waits until it's complete."
-                    )
+                    .help("Finder is still copying a game file here; NX Play waits until it's complete.")
             } else {
-                stateBadge
+                switch game.state {
+                case .ready: Badge(text: "Ready", color: .green)
+                case .extracted: Badge(text: "Extracted", color: .blue)
+                case .notExtracted:
+                    Badge(text: game.hasPackages ? "Not extracted" : "No NSP files", color: .secondary)
+                }
             }
         }
     }
+}
 
-    @ViewBuilder private var stateBadge: some View {
-        switch game.state {
-        case .ready: Badge(text: "Ready", color: .green)
-        case .extracted: Badge(text: "Extracted", color: .blue)
-        case .notExtracted:
-            Badge(text: game.hasPackages ? "Not extracted" : "No NSP files", color: .secondary)
-        }
-    }
+/// Play, Extract, or Stop / Cancel while its job runs.
+struct GameActionButton: View {
+    let game: Game
+    let job: Job?
+    @Environment(Library.self) private var library
 
-    @ViewBuilder private var action: some View {
+    var body: some View {
         if let job, job.status.isActive {
             Button(job.kind == .play && !job.isBuilding ? "Stop" : "Cancel", role: .cancel) {
                 job.cancel()
@@ -119,7 +116,7 @@ private struct GameStatus: View {
         }
     }
 
-    /// Title and icon, or the icon alone when a narrow card has no room for the title beside the badge.
+    /// Title and icon, or the icon alone when there's no room for the title.
     private func compactButton(
         _ title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void
     ) -> some View {
@@ -131,6 +128,24 @@ private struct GameStatus: View {
                 .help(Text(title))
         }
     }
+}
+
+/// A build's progress and stage, while one runs.
+struct JobProgress: View {
+    let job: Job?
+
+    var body: some View {
+        if let job, job.status.isActive, job.kind != .play || job.isBuilding {
+            VStack(alignment: .leading, spacing: 2) {
+                ProgressView(value: job.status == .queued ? 0 : job.progress?.fraction ?? 0)
+                    .controlSize(.small)
+                Text(job.status == .queued ? "Waiting for the current build" : stageText(job))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
 
     private func stageText(_ job: Job) -> String {
         guard let progress = job.progress else { return "Starting…" }
@@ -140,7 +155,7 @@ private struct GameStatus: View {
 }
 
 /// What a game has besides its build, on its icon: an IPA in its folder, an Xcode build from Install on Device.
-private struct IconBadges: View {
+struct IconBadges: View {
     let game: Game
 
     var body: some View {

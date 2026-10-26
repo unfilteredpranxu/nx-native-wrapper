@@ -25,6 +25,12 @@ public final class Library {
         static let team = "teamID"
         static let showsLog = "showsLog"
         static let logHeight = "logHeight"
+        static let viewStyle = "viewStyle"
+    }
+
+    /// The games as cards with their icons, or as a sortable list.
+    public enum ViewStyle: String, CaseIterable, Sendable {
+        case grid, list
     }
 
     public var root: URL? {
@@ -46,6 +52,9 @@ public final class Library {
     public var showsLog: Bool { didSet { defaults.set(showsLog, forKey: Keys.showsLog) } }
     /// The log panel's height in points, as last dragged.
     public var logHeight: Double { didSet { defaults.set(logHeight, forKey: Keys.logHeight) } }
+    public var viewStyle: ViewStyle {
+        didSet { defaults.set(viewStyle.rawValue, forKey: Keys.viewStyle) }
+    }
 
     public internal(set) var teams: [AppleTeam] = []
     public internal(set) var devices: [Device] = []
@@ -93,6 +102,8 @@ public final class Library {
         teamID = defaults.string(forKey: Keys.team) ?? ""
         showsLog = defaults.object(forKey: Keys.showsLog) as? Bool ?? true
         logHeight = defaults.object(forKey: Keys.logHeight) as? Double ?? 240
+        viewStyle =
+            defaults.string(forKey: Keys.viewStyle).flatMap(ViewStyle.init(rawValue:)) ?? .grid
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
