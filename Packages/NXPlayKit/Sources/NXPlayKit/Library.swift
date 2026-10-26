@@ -23,6 +23,8 @@ public final class Library {
         static let metalHUD = "metalHUD"
         static let language = "language"
         static let team = "teamID"
+        static let showsLog = "showsLog"
+        static let logHeight = "logHeight"
     }
 
     public var root: URL? {
@@ -40,6 +42,10 @@ public final class Library {
     public var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
     /// The Apple team that signs device installs; empty picks the first paid one Xcode knows.
     public var teamID: String { didSet { defaults.set(teamID, forKey: Keys.team) } }
+    /// The log panel under the games; it opens by itself when a job fails.
+    public var showsLog: Bool { didSet { defaults.set(showsLog, forKey: Keys.showsLog) } }
+    /// The log panel's height in points, as last dragged.
+    public var logHeight: Double { didSet { defaults.set(logHeight, forKey: Keys.logHeight) } }
 
     public internal(set) var teams: [AppleTeam] = []
     public internal(set) var devices: [Device] = []
@@ -85,6 +91,8 @@ public final class Library {
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
         language = defaults.string(forKey: Keys.language) ?? ""
         teamID = defaults.string(forKey: Keys.team) ?? ""
+        showsLog = defaults.object(forKey: Keys.showsLog) as? Bool ?? true
+        logHeight = defaults.object(forKey: Keys.logHeight) as? Double ?? 240
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -163,17 +171,7 @@ public final class Library {
     private func run(_ kind: Job.Kind, _ game: Game, select: Bool = true) {
         guard !isBusy(game), let command = command(kind, game) else { return }
         let job = Job(kind: kind, game: game, command: command)
-        job.onFinish = { [weak self] job in
-            guard let self else { return }
-            refresh()
-            if job.kind == .ipa, job.status == .succeeded,
-                let ipa = games.first(where: { $0.id == job.game.id })?.ipaURL
-            {
-                NSWorkspace.shared.activateFileViewerSelecting([ipa])
-            }
-            if case .install = job.kind { refreshDevices() }
-            startNextExtraction()
-        }
+        job.onFinish = { [weak self] job in self?.finished(job) }
         jobs[game.id] = job
         if select { selection = game.id }
         if kind == .play {
@@ -182,6 +180,22 @@ public final class Library {
             queue.append(job)
             startNextExtraction()
         }
+    }
+
+    func finished(_ job: Job) {
+        refresh()
+        if job.kind == .ipa, job.status == .succeeded,
+            let ipa = games.first(where: { $0.id == job.game.id })?.ipaURL
+        {
+            NSWorkspace.shared.activateFileViewerSelecting([ipa])
+        }
+        if case .install = job.kind { refreshDevices() }
+        // a failure's reason is in its output: show it
+        if case .failed = job.status {
+            showsLog = true
+            selection = job.game.id
+        }
+        startNextExtraction()
     }
 
     private func startNextExtraction() {

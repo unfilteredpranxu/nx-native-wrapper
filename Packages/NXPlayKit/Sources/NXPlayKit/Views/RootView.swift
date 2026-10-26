@@ -50,17 +50,13 @@ public struct RootView: View {
                     .buttonStyle(.borderedProminent)
             }
         } else {
-            VSplitView {
-                GameGrid()
-                    .frame(minHeight: 260, maxHeight: .infinity)
-                LogPanel()
-                    .frame(minHeight: 140, idealHeight: 240, maxHeight: .infinity)
-            }
+            LogSplit()
         }
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItemGroup {
+            LogToggle()
             Button {
                 library.chooseRoot()
             } label: {

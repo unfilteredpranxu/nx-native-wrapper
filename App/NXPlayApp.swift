@@ -17,6 +17,11 @@ struct NXPlayApp: App {
                 Button("Refresh") { library.refresh() }
                     .keyboardShortcut("r")
             }
+            CommandGroup(before: .toolbar) {
+                LogMenuItem()
+                    .library(library)
+                Divider()
+            }
             CommandGroup(before: .help) {
                 ControlsButton()
             }
