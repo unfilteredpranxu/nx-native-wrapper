@@ -35,6 +35,9 @@ public struct Game: Identifiable, Hashable, Sendable {
     /// The Mac host's save (DM_SAVE in the launcher), kept from run to run.
     public var saveFolder: URL? { existingFolder("run/save") }
 
+    /// Install on Device's Xcode build (derived data), kept to make the next install fast.
+    public var xcodeBuildFolder: URL? { existingFolder("xcode-derived-data") }
+
     private func existingFolder(_ path: String) -> URL? {
         guard let folder = buildFolder?.appending(path: path, directoryHint: .isDirectory),
             FileManager.default.fileExists(atPath: folder.path)

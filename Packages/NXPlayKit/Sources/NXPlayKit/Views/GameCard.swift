@@ -9,9 +9,7 @@ struct GameCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             GameIcon(url: game.iconURL)
-                .overlay(alignment: .topTrailing) {
-                    if let ipa = game.ipaURL { IPABadge(url: ipa).padding(6) }
-                }
+                .overlay(alignment: .topTrailing) { IconBadges(game: game).padding(6) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(game.name)
                     .font(.headline)
@@ -193,27 +191,49 @@ private struct GameStatus: View {
     }
 }
 
-/// On the icon of a game whose IPA is in its folder: solid, to read over any artwork.
-private struct IPABadge: View {
-    let url: URL
+/// What a game has besides its build, on its icon: an IPA in its folder, an Xcode build from Install on Device.
+private struct IconBadges: View {
+    let game: Game
 
     var body: some View {
-        Text("IPA")
+        HStack(spacing: 4) {
+            if let xcode = game.xcodeBuildFolder {
+                IconBadge(
+                    text: "Xcode", color: .indigo,
+                    help:
+                        "Xcode build for Install on Device, a full copy of the game (\(xcode.deletingLastPathComponent().lastPathComponent)/xcode-derived-data). Tools › Free Up Space removes it."
+                )
+            }
+            if let ipa = game.ipaURL {
+                IconBadge(text: "IPA", color: .accentColor, help: Self.help(ipa))
+            }
+        }
+    }
+
+    static func help(_ ipa: URL) -> String {
+        let size = (try? ipa.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+        return ipa.lastPathComponent
+            + (size.map {
+                ", " + ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file)
+            } ?? "")
+    }
+}
+
+/// Solid, to read over any artwork.
+private struct IconBadge: View {
+    let text: String
+    let color: Color
+    let help: String
+
+    var body: some View {
+        Text(text)
             .font(.caption2.weight(.bold))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .foregroundStyle(.white)
-            .background(Capsule().fill(Color.accentColor))
+            .background(Capsule().fill(color))
             .shadow(radius: 2)
             .help(help)
-    }
-
-    private var help: String {
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
-        return url.lastPathComponent
-            + (size.map {
-                ", " + ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file)
-            } ?? "")
     }
 }
 
