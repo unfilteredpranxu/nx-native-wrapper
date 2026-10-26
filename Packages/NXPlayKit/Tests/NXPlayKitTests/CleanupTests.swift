@@ -9,13 +9,19 @@ import Testing
     init() throws {
         root = FileManager.default.temporaryDirectory.appending(
             path: "nxplay-cleanup-\(UUID().uuidString)", directoryHint: .isDirectory)
-        // ready: built for the Mac; its NSZ was converted into the build's nsp/
+        // ready: built for the Mac; its NSZ was converted into the build's nsp/; installed on a device once
         try write("Ready/Ready [0100000000010000][v0].nsz", size: 3000)
         try write("Ready/Ready.ipa", size: 500)
         try write("Ready/0100000000010000_build/extract/v0/icon.jpg")
         try write("Ready/0100000000010000_build/start_mac.sh")
         try write("Ready/0100000000010000_build/tools/dmhost", executable: true)
         try write("Ready/0100000000010000_build/nsp/Ready [0100000000010000][v0].nsp", size: 4000)
+        try write(
+            "Ready/0100000000010000_build/xcode-derived-data/Build/Products/DmIOS.app/romfs/a.bin",
+            size: 6000)
+        try write(
+            "Ready/0100000000010000_build/xcode-derived-data/Build/Products/DmIOS.app/romfs/b.bin",
+            size: 2000)
         // extracted, never built for the Mac
         try write("Extracted/Extracted.XCI", size: 2000)
         try write("Extracted/0100000000020000_build/extract/v0/icon.jpg")
@@ -25,68 +31,87 @@ import Testing
     }
 
     private var games: [Game] { GameScanner.scan(root: root) }
+    private func game(_ name: String) -> Game {
+        games.first { $0.folder.lastPathComponent == name }!
+    }
 
-    @Test func gameFilesOnlyGoOnceAGameIsBuiltForTheMac() throws {
-        let groups = CleanupScanner.groups(.gameFiles, games: games)
-
+    @Test func listsEveryKindPerGameWithItsOwnRules() throws {
+        let groups = CleanupScanner.groups(games: games)
         #expect(groups.map(\.game.folder.lastPathComponent) == ["Extracted", "Fresh", "Ready"])
-        #expect(groups.map { $0.blocked == nil } == [false, false, true])
+
         let ready = try #require(groups.last)
-        #expect(ready.files.map(\.role) == [.original, .converted])
-        #expect(ready.files.map(\.url.pathExtension) == ["nsz", "nsp"])
-        #expect(ready.size >= 7000)
+        #expect(ready.files.map(\.role) == [.original, .converted, .ipa, .xcodeBuild])
+        #expect(ready.files.allSatisfy { $0.blocked == nil })
+        #expect(try #require(ready.files.last).size >= 8000)  // the whole Xcode build folder
+
+        // a game that isn't built for the Mac keeps its game files, but its IPA can go
+        let fresh = groups[1]
+        #expect(fresh.files.map(\.role) == [.original, .ipa])
+        #expect(fresh.files.map { $0.blocked == nil } == [false, true])
         #expect(groups[0].files.map(\.url.lastPathComponent) == ["Extracted.XCI"])  // any case of the extension
     }
 
-    @Test func ipasCanAlwaysGoUnlessTheGameIsBusy() {
-        let games = self.games
-        let fresh = games.first { $0.folder.lastPathComponent == "Fresh" }!
-        let groups = CleanupScanner.groups(.ipas, games: games, busy: [fresh.id])
-
-        #expect(groups.map(\.game.folder.lastPathComponent) == ["Fresh", "Ready"])
-        #expect(groups.map { $0.blocked == nil } == [false, true])
-        #expect(groups.flatMap(\.files).allSatisfy { $0.role == .ipa })
+    @Test func aBusyGameKeepsEverything() {
+        let groups = CleanupScanner.groups(games: games, busy: [game("Ready").id])
+        #expect(groups.last?.files.allSatisfy { $0.blocked != nil } == true)
     }
 
-    @Test func deletesOnlyTheConfirmedSelectionOfAllowedGames() async throws {
-        let cleanup = Cleanup(kind: .gameFiles)
-        cleanup.scan(games: games, busy: [])
-        let ready = try #require(cleanup.groups.first { $0.blocked == nil })
-        let blocked = try #require(cleanup.groups.first { $0.blocked != nil })
+    @Test func selectsByKindByGameAndByFile() {
+        let cleanup = Cleanup()
+        cleanup.apply(CleanupScanner.groups(games: games))
 
-        cleanup.toggle(blocked)
-        #expect(cleanup.selection.isEmpty)  // a blocked game's files cannot be picked
+        cleanup.toggle(.ipas)
+        #expect(cleanup.selectedFiles.map(\.url.lastPathComponent) == ["Fresh.ipa", "Ready.ipa"])
+        #expect(cleanup.isSelected(.ipas) == true)
+
+        cleanup.toggle(.gameFiles)  // only the ready game's: the others are blocked
+        #expect(
+            cleanup.selectedFiles.filter { $0.kind == .gameFiles }.map(\.role) == [
+                .original, .converted,
+            ])
+        #expect(cleanup.isSelected(.gameFiles) == true)
+
+        let ready = cleanup.groups.last!
+        #expect(cleanup.isSelected(ready) == nil)  // its Xcode build isn't picked
         cleanup.toggle(ready)
-        #expect(cleanup.isSelected(ready) == true)
-        cleanup.toggle(ready.files[1])
-        #expect(cleanup.isSelected(ready) == nil)  // partly
+        #expect(cleanup.isSelected(ready) == true && cleanup.isSelected(.xcodeBuilds) == true)
+        cleanup.toggle(.ipas)
+        #expect(cleanup.isSelected(ready) == nil && cleanup.isSelected(.ipas) == false)
+    }
+
+    @Test func deletesOnlyTheConfirmedSelection() async throws {
+        let cleanup = Cleanup()
+        await cleanup.scan(games: games, busy: [])
+        let ready = try #require(cleanup.groups.last)
+        let xcode = try #require(ready.files.last)
+        let original = ready.files[0]
+        cleanup.toggle(xcode)
+        cleanup.toggle(original)
 
         #expect(!cleanup.canDelete)  // not confirmed
         cleanup.confirmation = "Yes, I’m  sure!"
         #expect(cleanup.canDelete)
-
         await cleanup.delete()
 
-        #expect(cleanup.phase == .done(count: 1, size: ready.files[0].size))
-        #expect(!FileManager.default.fileExists(atPath: ready.files[0].url.path))
+        #expect(cleanup.phase == .done(count: 2, size: xcode.size + original.size))
+        #expect(!FileManager.default.fileExists(atPath: xcode.url.path))  // a whole folder
+        #expect(!FileManager.default.fileExists(atPath: original.url.path))
         #expect(FileManager.default.fileExists(atPath: ready.files[1].url.path))
-        #expect(FileManager.default.fileExists(atPath: blocked.files[0].url.path))
         #expect(cleanup.selection.isEmpty && cleanup.confirmation.isEmpty)
 
-        // the game keeps playing its build without the packages
+        // the game keeps playing its build without its packages
         let after = GameScanner.game(at: ready.game.folder)
         #expect(after?.state == .ready)
         #expect(after?.hasPackages == false)
     }
 
-    @Test func aRescanDropsSelectionsThatBecameBlocked() {
-        let cleanup = Cleanup(kind: .ipas)
-        cleanup.scan(games: games, busy: [])
-        cleanup.groups.forEach(cleanup.toggle)
+    @Test func aRescanDropsSelectionsThatBecameBlocked() async {
+        let cleanup = Cleanup()
+        await cleanup.scan(games: games, busy: [])
+        cleanup.toggle(.ipas)
         #expect(cleanup.selection.count == 2)
 
-        let fresh = games.first { $0.folder.lastPathComponent == "Fresh" }!
-        cleanup.scan(games: games, busy: [fresh.id])
+        await cleanup.scan(games: games, busy: [game("Fresh").id])
         #expect(cleanup.selection.map(\.lastPathComponent) == ["Ready.ipa"])
     }
 

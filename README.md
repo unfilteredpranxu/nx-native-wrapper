@@ -69,12 +69,13 @@ Extracted games show their icons and a **Play** button; the others have **Extrac
 
 ![Transfer Saves: the Mac's save is newer than the iPad's](docs/transfer-saves.webp)
 
-**Tools** in the menu bar frees disk space:
+**Tools › Free Up Space** lists, per game and with their sizes, what you can delete:
 
-- **Remove Game Files** lists each game's NSP, NSZ, XCI and XCZ files with their sizes, plus the NSPs a build converted from NSZ. Only games already built for the Mac qualify, since they keep playing from their build. Without these files a game can't be rebuilt: it keeps its current build when nxnative updates, and Install on Device and Build IPA need the files back. If your games folder holds your only copy, keep a backup.
-- **Remove IPAs** lists the IPAs built for sideloading.
+- **Game files:** each game's NSP, NSZ, XCI and XCZ files, plus the NSPs a build converted from NSZ. Only games already built for the Mac qualify, since they keep playing from their build. Without these files a game can't be rebuilt: it keeps its current build when nxnative updates, and Install on Device and Build IPA need the files back. If your games folder holds your only copy, keep a backup.
+- **IPAs:** the ones built for sideloading. Build IPA makes them again.
+- **Xcode builds:** `<title ID>_build/xcode-derived-data`, which Install on Device keeps to make the next install fast. It's a full copy of the game. Without it the next install works, but compiles and copies everything again.
 
-Nothing is selected until you pick it, and deleting needs you to type “yes, I'm sure”. Files are deleted for good, not moved to the Trash.
+Pick files one by one, a whole game, or a whole kind. Nothing is selected until you pick it, and deleting needs you to type “yes, I'm sure”. Everything is deleted for good, not moved to the Trash.
 
 Settings has the nxnative folder, the keys file, the game language, the Apple team for device installs, and Apple's Metal performance HUD. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls.
 

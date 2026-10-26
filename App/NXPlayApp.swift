@@ -25,17 +25,11 @@ struct NXPlayApp: App {
             }
         }
 
-        Window("Remove Game Files", id: CleanupView.windowID(.gameFiles)) {
-            CleanupView(kind: .gameFiles)
+        Window("Free Up Space", id: CleanupView.windowID) {
+            CleanupView()
                 .library(library)
         }
-        .defaultSize(width: 720, height: 640)
-
-        Window("Remove IPAs", id: CleanupView.windowID(.ipas)) {
-            CleanupView(kind: .ipas)
-                .library(library)
-        }
-        .defaultSize(width: 720, height: 520)
+        .defaultSize(width: 760, height: 680)
 
         Window("Game Controls", id: ControlsView.windowID) {
             ControlsView()
