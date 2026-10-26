@@ -24,7 +24,7 @@ NX Play takes the other route: one app for all your games, everything portable a
 ## Requirements
 
 - A Mac with Apple silicon and macOS 15 or later. On an Intel Mac, IPAs and device installs work, but games cannot run on the Mac.
-- [Xcode](https://apps.apple.com/app/xcode/id497799835), opened once. For iPhone and iPad, its iOS platform too.
+- [Xcode](https://apps.apple.com/app/xcode/id497799835), opened once, with its Metal Toolchain (`bin/setup` downloads it). For iPhone and iPad, its iOS platform too.
 - [Homebrew](https://brew.sh).
 - For Install on Device: an Apple developer account, signed in under Xcode › Settings › Apple Accounts.
 
@@ -38,7 +38,7 @@ bin/setup
 
 `bin/setup` can be run again at any time. It:
 
-1. checks the Mac and Xcode, and says what to fix;
+1. checks the Mac and Xcode, and says what to fix; downloads Xcode's Metal Toolchain if it's missing (`xcodebuild -downloadComponent MetalToolchain`), since every build compiles the game's shaders with it;
 2. installs the tools with Homebrew (`Brewfile`: uv, xcodegen, zstd, spirv-cross, glslang, the .NET SDK), and the ones in `mise.toml` if you use [mise](https://mise.jdx.dev);
 3. installs nxnative's Python packages into `.venv` in this folder with [uv](https://docs.astral.sh/uv/) (`pyproject.toml`, `uv.lock`), leaving your global Python alone;
 4. clones nxnative into `./nxnative`;

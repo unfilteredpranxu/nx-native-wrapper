@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Set up nx-native-wrapper on this Mac; safe to run again. Checks the Mac and Xcode, installs the tools
+# Set up nx-native-wrapper on this Mac; safe to run again. Checks the Mac and Xcode (downloading its Metal
+# Toolchain, which the shader builds need, when missing), installs the tools
 # (Homebrew, Brewfile; mise.toml too when mise is there), the Python packages (uv, into .venv), clones
 # nxnative into ./nxnative, then builds NX Play and installs it into /Applications.
 #
@@ -46,6 +47,11 @@ if [[ "$developer" == *.app/Contents/Developer ]]; then
   else fail "Xcode needs its first launch (license, components): sudo xcodebuild -runFirstLaunch"; fi
   if xcodebuild -showsdks 2>/dev/null | grep -q iphoneos; then ok "iOS platform"
   else warn "no iOS platform: IPAs and Install on Device need it: xcodebuild -downloadPlatform iOS"; fi
+  # every build compiles the game's shaders with it; from Xcode 26 on it is a separate download
+  if xcrun metal --version > /dev/null 2>&1; then ok "Metal compiler ($(xcrun metal --version 2>/dev/null | head -1 | sed 's/^Apple metal version //'))"
+  elif (( check )); then fail "no Metal compiler (shaders need it): xcodebuild -downloadComponent MetalToolchain"
+  elif xcodebuild -downloadComponent MetalToolchain && xcrun metal --version > /dev/null 2>&1; then ok "Metal compiler (downloaded)"
+  else fail "the Metal compiler did not install: xcodebuild -downloadComponent MetalToolchain"; fi
 else
   fail "Xcode is not selected (${developer:-none}): install it from the App Store, then: sudo xcode-select -s /Applications/Xcode.app"
 fi
