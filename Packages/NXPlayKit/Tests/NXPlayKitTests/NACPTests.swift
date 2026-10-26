@@ -31,7 +31,7 @@ import Testing
             Game(
                 folder: URL(filePath: "/g"), name: "G", titleID: nil, version: nil,
                 languages: languages,
-                iconURL: nil, buildFolder: nil, ipaURL: nil, hasPackages: true, state: .ready)
+                iconURL: nil, buildFolder: nil, ipaURL: nil, xcodeBuildFolder: nil, hasPackages: true, state: .ready)
         }
         #expect(GameLanguage.choose("ja", for: game(["en-US", "ja"])) == "ja")
         #expect(GameLanguage.choose("en-US", for: game(["en-GB", "fr"])) == "en-GB")

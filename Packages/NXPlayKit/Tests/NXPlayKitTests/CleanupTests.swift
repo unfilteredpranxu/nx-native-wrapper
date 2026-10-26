@@ -103,6 +103,10 @@ import Testing
         let after = GameScanner.game(at: ready.game.folder)
         #expect(after?.state == .ready)
         #expect(after?.hasPackages == false)
+        // and the rescanned game differs from the old one, so its card redraws without the Xcode badge
+        #expect(ready.game.xcodeBuildFolder != nil)
+        #expect(after?.xcodeBuildFolder == nil)
+        #expect(after != ready.game)
     }
 
     @Test func aRescanDropsSelectionsThatBecameBlocked() async {

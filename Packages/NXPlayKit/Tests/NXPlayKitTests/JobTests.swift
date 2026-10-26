@@ -60,7 +60,7 @@ import Testing
         try ("#!/bin/bash\n" + body + "\n").write(to: script, atomically: true, encoding: .utf8)
         let game = Game(
             folder: folder, name: "Test", titleID: nil, version: nil, languages: [], iconURL: nil,
-            buildFolder: nil, ipaURL: nil, hasPackages: true, state: .notExtracted)
+            buildFolder: nil, ipaURL: nil, xcodeBuildFolder: nil, hasPackages: true, state: .notExtracted)
         return Job(
             kind: .extract, game: game,
             command: NXPlayCommand(

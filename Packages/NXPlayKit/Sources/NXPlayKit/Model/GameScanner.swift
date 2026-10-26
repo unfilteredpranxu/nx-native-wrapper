@@ -36,6 +36,10 @@ public enum GameScanner {
             iconURL: build?.iconURL,
             buildFolder: build?.folder,
             ipaURL: newest(entries.filter { $0.pathExtension.lowercased() == "ipa" }),
+            xcodeBuildFolder: build.map {
+                $0.folder.appending(path: "xcode-derived-data", directoryHint: .isDirectory)
+            }
+            .flatMap { isDirectory($0) ? $0 : nil },
             hasPackages: hasPackages,
             state: state
         )

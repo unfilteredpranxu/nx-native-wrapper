@@ -21,6 +21,10 @@ public struct Game: Identifiable, Hashable, Sendable {
     public let buildFolder: URL?
     /// The IPA build_ipa_from_nsp.py left in the game folder (the newest, when there are several).
     public let ipaURL: URL?
+    /// Install on Device's Xcode build (`<id>_build/xcode-derived-data`), kept to make the next install fast.
+    /// Stored, not looked up when asked: a card redraws only when its Game changes, so a value read from disk
+    /// on the fly kept showing a removed build.
+    public let xcodeBuildFolder: URL?
     public let hasPackages: Bool
     public let state: State
 
@@ -34,9 +38,6 @@ public struct Game: Identifiable, Hashable, Sendable {
 
     /// The Mac host's save (DM_SAVE in the launcher), kept from run to run.
     public var saveFolder: URL? { existingFolder("run/save") }
-
-    /// Install on Device's Xcode build (derived data), kept to make the next install fast.
-    public var xcodeBuildFolder: URL? { existingFolder("xcode-derived-data") }
 
     private func existingFolder(_ path: String) -> URL? {
         guard let folder = buildFolder?.appending(path: path, directoryHint: .isDirectory),
