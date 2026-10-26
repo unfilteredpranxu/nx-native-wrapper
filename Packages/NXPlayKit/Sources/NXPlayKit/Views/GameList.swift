@@ -49,6 +49,7 @@ struct GameList: View {
                     GameActionButton(game: row.game, job: library.job(for: row.game))
                         .controlSize(.small)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        .library(library)  // see below
                 }
                 .width(min: 44, ideal: 90)
             } rows: {
@@ -71,9 +72,11 @@ struct GameList: View {
                     }
                 }
             }
+            // Table builds cells and menus in views of their own (cells while scrolling): those don't always get
+            // the window's environment, and a view reading Library from it crashed. Hand it to them directly.
             .contextMenu(forSelectionType: Game.ID.self) { ids in
                 if let id = ids.first, let game = library.games.first(where: { $0.id == id }) {
-                    GameActions(game: game)
+                    GameActions(game: game).library(library)
                 }
             } primaryAction: { ids in
                 if let id = ids.first, let game = library.games.first(where: { $0.id == id }) {
