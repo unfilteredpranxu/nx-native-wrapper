@@ -20,7 +20,22 @@ struct NXPlayApp: App {
             CommandGroup(before: .help) {
                 ControlsButton()
             }
+            CommandMenu("Tools") {
+                ToolsMenu()
+            }
         }
+
+        Window("Remove Game Files", id: CleanupView.windowID(.gameFiles)) {
+            CleanupView(kind: .gameFiles)
+                .library(library)
+        }
+        .defaultSize(width: 720, height: 640)
+
+        Window("Remove IPAs", id: CleanupView.windowID(.ipas)) {
+            CleanupView(kind: .ipas)
+                .library(library)
+        }
+        .defaultSize(width: 720, height: 520)
 
         Window("Game Controls", id: ControlsView.windowID) {
             ControlsView()

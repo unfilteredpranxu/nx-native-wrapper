@@ -49,7 +49,9 @@ struct GameCard: View {
         let busy = library.isBusy(game)
         if game.isExtracted {
             Button("Play", systemImage: "play.fill") { library.play(game) }.disabled(busy)
-            Button("Rebuild", systemImage: "hammer") { library.rebuild(game) }.disabled(busy)
+            // a game whose original files were removed plays its build but cannot be rebuilt
+            Button("Rebuild", systemImage: "hammer") { library.rebuild(game) }.disabled(
+                busy || !game.hasPackages)
         } else {
             Button("Extract", systemImage: "square.and.arrow.down") { library.extract(game) }
                 .disabled(busy || !game.canExtract)

@@ -29,10 +29,10 @@ else
 fi
 launcher_name=start_mac.sh
 
-rebuild=0 fps=0 build_only=0 ipa=0 lang="" device=""
+rebuild=0 explicit_rebuild=0 fps=0 build_only=0 ipa=0 lang="" device=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --rebuild) rebuild=1; shift ;;
+    --rebuild) rebuild=1 explicit_rebuild=1; shift ;;
     --build-only) build_only=1; shift ;;
     --ipa) ipa=1; shift ;;
     --device) device="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
@@ -216,6 +216,26 @@ start() {
   fi
   exec bash "$1"
 }
+
+# A game whose original files were removed to free space (NX Play's Remove Game Files) cannot be rebuilt:
+# after an nxnative update it keeps playing the build it has, rather than failing to rebuild and not starting
+has_game_files() {
+  local f
+  shopt -s nocasematch
+  for f in "$game"/*; do
+    case "$f" in *.nsp | *.nsz | *.xci | *.xcz) [[ -s "$f" ]] && return 0 ;; esac
+  done
+  return 1
+}
+if [[ $rebuild -eq 1 ]] && ! has_game_files; then
+  if [[ $explicit_rebuild -eq 0 && -n "$(find_launcher)" ]]; then
+    echo "nxplay: no game files (NSP, NSZ, XCI, XCZ) to rebuild from: playing the current build, without these nxnative changes"
+    rebuild=0
+  else
+    echo "nxplay: no game files (NSP, NSZ, XCI, XCZ) in $game to build from; put them back to rebuild" >&2
+    exit 1
+  fi
+fi
 
 if [[ $rebuild -eq 0 ]]; then
   launcher="$(find_launcher)"

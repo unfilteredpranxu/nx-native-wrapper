@@ -59,6 +59,13 @@ Extracted games show their icons and a **Play** button; the others have **Extrac
 
 ![Transfer Saves: the Mac's save is newer than the iPad's](docs/transfer-saves.webp)
 
+**Tools** in the menu bar frees disk space:
+
+- **Remove Game Files** lists each game's NSP, NSZ, XCI and XCZ files with their sizes, plus the NSPs a build converted from NSZ. Only games already built for the Mac qualify, since they keep playing from their build. Without these files a game can't be rebuilt: it keeps its current build when nxnative updates, and Install on Device and Build IPA need the files back. If your games folder holds your only copy, keep a backup.
+- **Remove IPAs** lists the IPAs built for sideloading.
+
+Nothing is selected until you pick it, and deleting needs you to type “yes, I'm sure”. Files are deleted for good, not moved to the Trash.
+
 Settings has the nxnative folder, the keys file, the game language, the Apple team for device installs, and Apple's Metal performance HUD. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls.
 
 <img src="docs/settings.webp" alt="NX Play's Settings" width="560">
