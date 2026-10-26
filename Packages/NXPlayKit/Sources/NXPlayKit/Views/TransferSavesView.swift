@@ -60,6 +60,11 @@ struct TransferSavesView: View {
                     }
                     .labelStyle(.iconOnly)
                     .disabled(transfer.device == nil || transfer.isBusy)
+                    .help(
+                        transfer.device == nil
+                            ? "Look for devices again" : "Read the device's save again"
+                    )
+                    .disabled(transfer.isBusy || library.isLoadingDevices)
                 }
             }
         }
@@ -67,7 +72,9 @@ struct TransferSavesView: View {
 
     @ViewBuilder private var files: some View {
         let rows = transfer.comparison.rows
-        if transfer.phase == .loading, transfer.deviceFiles == nil {
+        if library.devices.isEmpty {
+            NoDeviceView(isLooking: library.isLoadingDevices)
+        } else if transfer.phase == .loading, transfer.deviceFiles == nil {
             ProgressView("Reading the save on the device…").frame(
                 maxWidth: .infinity, maxHeight: .infinity)
         } else if rows.isEmpty {
@@ -156,6 +163,32 @@ struct TransferSavesView: View {
     private func pickFirstDevice() async {
         guard transfer.device == nil, let first = library.devices.first else { return }
         transfer.device = first  // onChange loads it
+    }
+}
+
+/// No iPhone or iPad this Mac can reach: what pairing takes. Each Mac pairs with a device on its own, so a
+/// phone set up on one Mac is not listed on another until it is paired there too. A newly paired device
+/// shows up by itself (the device list refreshes when the app becomes active).
+private struct NoDeviceView: View {
+    let isLooking: Bool
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(
+                isLooking ? "Looking for Devices…" : "No iPhone or iPad",
+                systemImage: "iphone.slash")
+        } description: {
+            Text(
+                """
+                Each Mac pairs with a device on its own. Connect it to this Mac with a cable, unlock it and tap Trust. \
+                Then open Xcode › Window › Devices and Simulators and wait until Xcode has prepared it; \
+                tick Connect via network there to skip the cable next time. \
+                Developer Mode must be on (Settings › Privacy & Security).
+                """)
+        } actions: {
+            if isLooking { ProgressView().controlSize(.small) }
+        }
+        .frame(maxHeight: .infinity)
     }
 }
 
