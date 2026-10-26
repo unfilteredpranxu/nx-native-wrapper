@@ -15,9 +15,8 @@ public enum GameScanner {
     public static func game(at folder: URL) -> Game? {
         guard isDirectory(folder) else { return nil }
         let entries = children(of: folder)
-        let hasPackages = entries.contains {
-            packageExtensions.contains($0.pathExtension.lowercased())
-        }
+        let packages = entries.filter { packageExtensions.contains($0.pathExtension.lowercased()) }
+        let hasPackages = !packages.isEmpty
         let builds = entries.filter(isBuildFolder).map(Build.init(folder:))
         guard hasPackages || !builds.isEmpty else { return nil }
 
@@ -41,9 +40,22 @@ public enum GameScanner {
             }
             .flatMap { isDirectory($0) ? $0 : nil },
             hasPackages: hasPackages,
+            isCopying: packages.contains(where: isBeingCopied),
             state: state
         )
     }
+
+    /// Finder dates a file it is still copying 24 January 1984 (the Mac's launch day) and puts the source's
+    /// creation date back when the copy is complete; no real game file is that old. A day either side covers
+    /// the time zone. Other copies leave no such mark: browsers and torrent clients use another extension
+    /// until a file is complete, rsync a hidden name, and cp nothing at all.
+    static func isBeingCopied(_ url: URL) -> Bool {
+        guard let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
+        else { return false }
+        return abs(created.timeIntervalSince(finderCopyDate)) < 86_400
+    }
+
+    static let finderCopyDate = Date(timeIntervalSince1970: 443_750_400)  // 1984-01-24 00:00 UTC
 
     struct Build {
         let folder: URL

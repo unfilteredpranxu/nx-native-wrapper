@@ -85,12 +85,23 @@ private struct GameStatus: View {
         case (.failed?, _):
             Badge(text: "Failed", color: .red)
         default:
-            switch game.state {
-            case .ready: Badge(text: "Ready", color: .green)
-            case .extracted: Badge(text: "Extracted", color: .blue)
-            case .notExtracted:
-                Badge(text: game.hasPackages ? "Not extracted" : "No NSP files", color: .secondary)
+            if game.isCopying {
+                Badge(text: "Copying…", color: .orange)
+                    .help(
+                        "Finder is still copying a game file here; NX Play waits until it's complete."
+                    )
+            } else {
+                stateBadge
             }
+        }
+    }
+
+    @ViewBuilder private var stateBadge: some View {
+        switch game.state {
+        case .ready: Badge(text: "Ready", color: .green)
+        case .extracted: Badge(text: "Extracted", color: .blue)
+        case .notExtracted:
+            Badge(text: game.hasPackages ? "Not extracted" : "No NSP files", color: .secondary)
         }
     }
 

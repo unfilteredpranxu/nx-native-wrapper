@@ -26,13 +26,17 @@ public struct Game: Identifiable, Hashable, Sendable {
     /// on the fly kept showing a removed build.
     public let xcodeBuildFolder: URL?
     public let hasPackages: Bool
+    /// A game file Finder is still copying into the folder: nothing may build from it until it's complete.
+    public var isCopying = false
     public let state: State
 
     public var id: String { folder.path }
     public var isExtracted: Bool { state != .notExtracted }
-    public var canExtract: Bool { state == .notExtracted && hasPackages }
+    public var canExtract: Bool { state == .notExtracted && hasPackages && !isCopying }
+    /// Builds read the game files: a rebuild, the IPA and Install on Device (which also starts from the NSPs).
+    public var canBuildFromFiles: Bool { hasPackages && !isCopying }
     /// The IPA build starts from the NSPs, whatever the Mac build left.
-    public var canBuildIPA: Bool { hasPackages }
+    public var canBuildIPA: Bool { canBuildFromFiles }
 
     public var logsFolder: URL? { existingFolder("logs") }
 

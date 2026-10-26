@@ -43,6 +43,24 @@ import Testing
         #expect(games[2].hasPackages == false)
     }
 
+    @Test func aFileFinderIsStillCopyingHoldsTheGameBack() throws {
+        let nsp = root.appending(path: "Wonder/Wonder [0100000000010000][v0].nsp")
+        try touch(nsp)
+        // what Finder sets while copying (seen: 1984-01-24 11:00 local), then the source's date once complete
+        let copying = ISO8601DateFormatter().date(from: "1984-01-24T08:00:00Z")!
+        try FileManager.default.setAttributes([.creationDate: copying], ofItemAtPath: nsp.path)
+
+        let game = try #require(GameScanner.scan(root: root).first)
+        #expect(game.isCopying)
+        #expect(!game.canExtract && !game.canBuildIPA)
+        #expect(CleanupScanner.groups(games: [game]).first?.files.first?.blocked != nil)
+
+        try FileManager.default.setAttributes(
+            [.creationDate: Date(timeIntervalSince1970: 1_692_051_683)], ofItemAtPath: nsp.path)
+        let done = try #require(GameScanner.scan(root: root).first)
+        #expect(!done.isCopying && done.canExtract)
+    }
+
     @Test func aLauncherWithoutTheMacHostIsNotReady() throws {
         let folder = try build(game: "Metroid", titleID: "010093801237C000", versions: [0])
         try touch(folder.appending(path: "start_mac.sh"))

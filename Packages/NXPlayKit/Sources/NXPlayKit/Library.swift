@@ -124,6 +124,21 @@ public final class Library {
 
     public func refresh() {
         games = root.map(GameScanner.scan(root:)) ?? []
+        watchCopies()
+    }
+
+    @ObservationIgnored private var copyWatch: Task<Void, Never>?
+
+    /// While Finder is copying a game file in, look again every few seconds, so the game turns extractable by
+    /// itself when the copy completes.
+    private func watchCopies() {
+        guard games.contains(where: \.isCopying), copyWatch == nil else { return }
+        copyWatch = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard let self, !Task.isCancelled else { return }
+            copyWatch = nil
+            refresh()
+        }
     }
 
     public func chooseRoot() {

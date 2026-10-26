@@ -99,6 +99,7 @@ public enum CleanupScanner {
     static func blocked(_ role: CleanupFile.Role, _ game: Game, busy: Bool) -> String? {
         if busy { return "Busy: wait until its build or game finishes." }
         guard role == .original || role == .converted else { return nil }
+        if game.isCopying { return "Still being copied into the folder." }
         return switch game.state {
         case .ready: nil
         case .extracted: "Not built for the Mac yet: play it once first."

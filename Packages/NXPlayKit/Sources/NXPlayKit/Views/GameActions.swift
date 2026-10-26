@@ -34,7 +34,7 @@ struct GameActions: View {
             }
             // a game whose original files were removed plays its build but cannot be rebuilt
             Button("Rebuild", systemImage: "hammer") { game.map(library.rebuild) }
-                .disabled(busy || game?.isExtracted != true || game?.hasPackages != true)
+                .disabled(busy || game?.isExtracted != true || game?.canBuildFromFiles != true)
                 .shortcut("b", if: inMenuBar)
             Menu("Install on Device", systemImage: "apps.iphone") {
                 if library.devices.isEmpty {
