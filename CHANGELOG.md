@@ -7,8 +7,11 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 ### Added
 
 - **Download and set up from the app:** NX Play comes as a signed, notarized DMG. On first launch **Setup** (NX Play › Setup…) checks the Mac and Xcode, and **Install Missing** installs the Metal Toolchain, Homebrew's tools, Python with nxnative's packages, and nxnative itself. Homebrew is the one thing to install by hand. What Setup installs, apart from Homebrew's tools, goes into `~/Library/Application Support/NX Play`. A copy built from the source keeps using the checkout, as before.
-
 - **Save backup to a private Git repository** (Settings): pick a clone of your own repository. While a game plays, NX Play copies its save into a folder named after the game and its title ID each time the game saves, then commits and pushes. It does this once more when the game quits. If another Mac pushed in the meantime, its commits are pulled in first. Pushing uses your own Git credentials, and each backup shows in the log.
+
+### Changed
+
+- **`bin/install` replaces a running NX Play safely.** It used to swap the app out from under a running game or build. Now it asks NX Play to quit once nothing is running in it (games, builds, Free Up Space deletions, save transfers), waits until it has, installs, and reopens it. Ctrl-C while it waits cancels the install and leaves NX Play open. NX Play 1.6 and older don't respond, so quit those by hand once.
 
 ### Fixed
 

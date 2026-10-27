@@ -152,7 +152,7 @@ public struct CleanupView: View {
         guard cleanup.canDelete else { return }
         Task {
             await rescan()  // a game that started building meanwhile is no longer selectable
-            await cleanup.delete()
+            await library.inFlight { await cleanup.delete() }
             library.refresh()
             await rescan()
         }

@@ -94,6 +94,11 @@ public final class Library {
     @ObservationIgnored private var queue: [Job] = []
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
     @ObservationIgnored private let saveBackup = SaveBackup()
+    @ObservationIgnored private var installObservers: [any NSObjectProtocol] = []
+    /// bin/install asked NX Play to quit once nothing is running, to replace it (quitWhenIdleNotification).
+    @ObservationIgnored private(set) var quitsWhenIdle = false
+    /// File work outside the jobs that quitting would cut short: Free Up Space deleting, a save transfer copying.
+    @ObservationIgnored private var tasksInFlight = 0
     /// Screenshot mode (Screenshots.swift): sample teams and devices that Xcode and devicectl must not replace.
     @ObservationIgnored let isScreenshot: Bool
     #if DEBUG
@@ -137,6 +142,7 @@ public final class Library {
             MainActor.assumeIsolated { self?.stopAll() }
         }
         gamepad.onCommand = { [weak self] in self?.handle($0) }
+        if !isScreenshot { observeInstall() }
         refresh()
         refreshDevices()
     }
@@ -362,6 +368,7 @@ public final class Library {
             }
         }
         startNextExtraction()
+        quitIfIdle()
     }
 
     private func startNextExtraction() {
@@ -371,6 +378,50 @@ public final class Library {
         else { return }
         queue.removeFirst()
         next.start()
+    }
+
+    // MARK: - Install (bin/install)
+
+    /// Posted by bin/install: quit as soon as no game, build or file work is running, so the app can be replaced
+    /// without cutting anything short. Answered from inside the app, so nothing can start between the check and the quit.
+    static let quitWhenIdleNotification = Notification.Name("com.varyform.nxplay.quitWhenIdle")
+    /// Posted by bin/install when it is cancelled while waiting.
+    static let stayOpenNotification = Notification.Name("com.varyform.nxplay.stayOpen")
+
+    /// Nothing running that quitting would stop: no job (queued or running) and no file work in flight.
+    public var isIdle: Bool {
+        tasksInFlight == 0 && !jobs.values.contains { $0.status.isActive }
+    }
+
+    /// Runs file work that must not be cut short by bin/install's quit.
+    public func inFlight(_ work: () async -> Void) async {
+        tasksInFlight += 1
+        await work()
+        tasksInFlight -= 1
+        quitIfIdle()
+    }
+
+    func requestQuitWhenIdle(_ on: Bool) {
+        quitsWhenIdle = on
+        quitIfIdle()
+    }
+
+    private func observeInstall() {
+        let center = DistributedNotificationCenter.default()
+        installObservers = [
+            (Self.quitWhenIdleNotification, true), (Self.stayOpenNotification, false),
+        ].map { name, on in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.requestQuitWhenIdle(on) }
+            }
+        }
+    }
+
+    @ObservationIgnored var terminate: () -> Void = { NSApp.terminate(nil) }
+
+    private func quitIfIdle() {
+        guard quitsWhenIdle, isIdle else { return }
+        terminate()
     }
 
     private func stopAll() {

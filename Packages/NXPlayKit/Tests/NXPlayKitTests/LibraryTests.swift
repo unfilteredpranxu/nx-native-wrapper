@@ -157,6 +157,33 @@ import Testing
         #expect(library.jobs.isEmpty)
     }
 
+    @Test func installQuitsOnlyOnceNothingRuns() async {
+        let library = library()
+        var quits = 0
+        library.terminate = { quits += 1 }
+        let game = job("Playing", .running)
+        library.jobs[game.game.id] = game
+
+        library.requestQuitWhenIdle(true)
+        #expect(quits == 0)  // a game is running
+        game.showScreenshot(["output"], status: .succeeded)
+        library.finished(game)
+        #expect(quits == 1)
+
+        // cancelled install: nothing quits after that
+        library.requestQuitWhenIdle(false)
+        await library.inFlight {}
+        #expect(quits == 1)
+
+        // file work in flight holds the quit back until it ends
+        library.requestQuitWhenIdle(false)
+        await library.inFlight {
+            library.requestQuitWhenIdle(true)
+            #expect(quits == 1)
+        }
+        #expect(quits == 2)
+    }
+
     @Test func theOtherMetalFailureSuggestsTheSetting() {
         let library = library()
         let job = job("Wonder", .failed(1))

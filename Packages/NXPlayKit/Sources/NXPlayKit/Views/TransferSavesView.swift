@@ -142,7 +142,7 @@ struct TransferSavesView: View {
             if transfer.isBusy { ProgressView().controlSize(.small) }
             Button("Done") { dismiss() }
                 .keyboardShortcut(.cancelAction)
-            Button(copyTitle) { Task { await transfer.copy() } }
+            Button(copyTitle) { Task { await library.inFlight { await transfer.copy() } } }
                 .keyboardShortcut(.defaultAction)
                 .disabled(!transfer.canCopy || library.isBusy(transfer.game))
         }
