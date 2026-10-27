@@ -158,6 +158,7 @@ private struct Carousel: View {
                     .frame(height: geometry.size.height)
                 }
                 .scrollDisabled(true)
+                .scrollClipDisabled()  // shadows fade out instead of ending at the carousel's edges
                 .onChange(of: selection, initial: true) {
                     withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
                         proxy.scrollTo(selection, anchor: .center)
@@ -190,8 +191,11 @@ private struct Tile: View {
                     .white.opacity(isSelected ? 0.95 : 0), lineWidth: 4)
             }
             .frame(width: ConsoleView.tile, height: ConsoleView.tile)
-            .shadow(color: .white.opacity(isSelected ? 0.35 : 0), radius: 30)
-            .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
+            // the outline and the scale mark the selection; a white glow read as a lit, foreign band
+            .shadow(
+                color: .black.opacity(isSelected ? 0.6 : 0.4), radius: isSelected ? 24 : 14,
+                y: isSelected ? 14 : 8
+            )
             .scaleEffect(isSelected ? 1.18 : 0.88)
             .opacity(isSelected ? 1 : 0.55)
             .animation(.spring(duration: 0.35, bounce: 0.2), value: isSelected)
