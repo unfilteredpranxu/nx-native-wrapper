@@ -27,10 +27,11 @@ struct ConsoleView: View {
                     // the details hang under the carousel without taking part in the layout: the progress bar
                     // coming and going made them taller and moved the tiles up and down
                     Carousel(games: games, selection: selected?.id)
-                        .overlay(alignment: .bottom) {
+                        .overlay(alignment: .top) {
                             if let selected {
                                 Details(game: selected, job: library.job(for: selected))
-                                    .alignmentGuide(.bottom) { $0[.top] }
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.top, Carousel.height)
                             }
                         }
                 }
@@ -167,8 +168,10 @@ private struct Carousel: View {
                 }
             }
         }
-        .frame(height: ConsoleView.tile * 1.5)
+        .frame(height: Self.height)
     }
+
+    static let height = ConsoleView.tile * 1.5
 }
 
 private struct Tile: View {
