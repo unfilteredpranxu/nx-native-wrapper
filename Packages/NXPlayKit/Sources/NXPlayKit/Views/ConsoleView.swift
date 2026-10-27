@@ -24,8 +24,15 @@ struct ConsoleView: View {
                     Text("No games ready to play yet").font(.largeTitle.bold()).foregroundStyle(
                         .white.opacity(0.7))
                 } else {
+                    // the details hang under the carousel without taking part in the layout: the progress bar
+                    // coming and going made them taller and moved the tiles up and down
                     Carousel(games: games, selection: selected?.id)
-                    if let selected { Details(game: selected, job: library.job(for: selected)) }
+                        .overlay(alignment: .bottom) {
+                            if let selected {
+                                Details(game: selected, job: library.job(for: selected))
+                                    .alignmentGuide(.bottom) { $0[.top] }
+                            }
+                        }
                 }
                 Spacer(minLength: 20)
                 Hints(game: selected, gamepad: library.gamepad)
