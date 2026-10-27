@@ -32,6 +32,9 @@ public struct Game: Identifiable, Hashable, Sendable {
     public var isCopying = false
     /// When nxplay last started or ended the game (`run/last_played`); Console Mode puts the latest first.
     public var lastPlayed: Date? = nil
+    /// Keep This Build: a `keep` file in the build folder, so nxplay plays the build as it is after an nxnative
+    /// update instead of rebuilding it; only Rebuild replaces it.
+    public var isKept = false
     public let state: State
 
     public var id: String { folder.path }
@@ -41,6 +44,11 @@ public struct Game: Identifiable, Hashable, Sendable {
     public var canBuildFromFiles: Bool { hasPackages && !isCopying }
     /// The IPA build starts from the NSPs, whatever the Mac build left.
     public var canBuildIPA: Bool { canBuildFromFiles }
+
+    /// A game that works can be kept from automatic rebuilds: it needs a build that plays.
+    public var canKeep: Bool { state == .ready || isKept }
+
+    public var keepFile: URL? { buildFolder?.appending(path: GameScanner.keepName) }
 
     public var logsFolder: URL? { existingFolder("logs") }
 

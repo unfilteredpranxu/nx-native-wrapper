@@ -36,6 +36,14 @@ struct GameActions: View {
             Button("Rebuild", systemImage: "hammer") { game.map(library.rebuild) }
                 .disabled(busy || game?.isExtracted != true || game?.canBuildFromFiles != true)
                 .shortcut("b", if: inMenuBar)
+            // a game that works stays as it is when nxnative updates; Rebuild still replaces it
+            Toggle(
+                "Keep This Build", systemImage: "lock",
+                isOn: Binding(
+                    get: { game?.isKept == true },
+                    set: { kept in game.map { library.setKept(kept, $0) } })
+            )
+            .disabled(game?.canKeep != true)
             Menu("Install on Device", systemImage: "apps.iphone") {
                 if library.devices.isEmpty {
                     Text(

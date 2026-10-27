@@ -166,6 +166,13 @@ struct IconBadges: View {
 
     var body: some View {
         HStack(spacing: 4) {
+            if game.isKept {
+                IconBadge(
+                    text: "Kept", symbol: "lock.fill", color: .orange,
+                    help:
+                        "Keep This Build: nxnative updates don't rebuild this game, so it keeps playing as it does now. Rebuild replaces it."
+                )
+            }
             if let app = game.macAppURL {
                 IconBadge(
                     text: "App", color: .teal,
@@ -198,18 +205,26 @@ struct IconBadges: View {
 /// Solid, to read over any artwork.
 private struct IconBadge: View {
     let text: String
+    /// Shown instead of the text, which VoiceOver still reads.
+    var symbol: String? = nil
     let color: Color
     let help: String
 
     var body: some View {
-        Text(text)
-            .font(.caption2.weight(.bold))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .foregroundStyle(.white)
-            .background(Capsule().fill(color))
-            .shadow(radius: 2)
-            .help(help)
+        Group {
+            if let symbol {
+                Image(systemName: symbol).accessibilityLabel(text)
+            } else {
+                Text(text)
+            }
+        }
+        .font(.caption2.weight(.bold))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .foregroundStyle(.white)
+        .background(Capsule().fill(color))
+        .shadow(radius: 2)
+        .help(help)
     }
 }
 

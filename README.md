@@ -111,7 +111,7 @@ Settings has the nxnative folder, the keys file, the game language, the Apple te
 
 `xcrun devicectl list devices` lists the device UDIDs.
 
-Each run starts by updating nxnative. New commits are listed, and the game is rebuilt when they change any files. The `./nxnative` clone is only for following upstream: when upstream rewrites its history, nxplay follows it, so keep your own nxnative changes in another clone (`NXNATIVE=/path/to/it`).
+Each run starts by updating nxnative. New commits are listed, and the game is rebuilt when they change any files, unless its build is kept: NX Play's Keep This Build puts a `keep` file in `<title ID>_build`, and that build then plays as it is until an explicit `--rebuild`. The `./nxnative` clone is only for following upstream: when upstream rewrites its history, nxplay follows it, so keep your own nxnative changes in another clone (`NXNATIVE=/path/to/it`).
 
 The run command is saved in `<game folder>/<title ID>_build/start_mac.sh`. It holds absolute paths, so after you move a game folder (or nxnative), the next run rewrites them to the new location.
 

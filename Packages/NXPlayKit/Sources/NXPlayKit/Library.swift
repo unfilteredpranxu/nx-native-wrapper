@@ -198,6 +198,25 @@ public final class Library {
     public func makeMacApp(_ game: Game) { run(.macApp, game) }
     public func install(_ game: Game, on device: Device) { run(.install(device), game) }
 
+    /// Keep This Build on or off: nxplay reads the keep file before it rebuilds after an nxnative update.
+    public func setKept(_ kept: Bool, _ game: Game) {
+        guard let file = game.keepFile else { return }
+        do {
+            if kept {
+                try Data(
+                    "Kept by NX Play: nxnative updates don't rebuild this build; Rebuild does.\n"
+                        .utf8
+                )
+                .write(to: file)
+            } else if FileManager.default.fileExists(atPath: file.path) {
+                try FileManager.default.removeItem(at: file)
+            }
+        } catch {
+            problem = "Could not change Keep This Build: \(error.localizedDescription)"
+        }
+        refresh()
+    }
+
     /// Opens the save transfer for a game; the copy NX Play installs is preferred when a device has several.
     public func transferSaves(_ game: Game) {
         refreshDevices()

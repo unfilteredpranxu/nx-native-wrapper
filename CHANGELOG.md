@@ -6,6 +6,7 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ### Added
 
+- **Keep This Build** (Game menu and right-click menu): keeps a game that works from being rebuilt when nxnative updates, since an update can break a game that played fine. A lock badge marks it on the icon, and `nxplay` plays the kept build as it is, saying it does so without the new nxnative changes. Rebuild (`nxplay --rebuild`) still replaces it. It's a `keep` file in `<title ID>_build`.
 - **Console Mode starts at the game you played last:** the carousel lists games by when you last played them, newest first, then the ones you haven't played yet by name. Below the title it shows when you last played the selected game. `nxplay` records the time when a game starts and when it ends, in `<title ID>_build/run/last_played`, so plays from the Terminal count too.
 - **Progress on the Dock icon:** a bar along the bottom of NX Play's icon while extractions, rebuilds, IPAs or installs run (their average when there are several). A **!** badge marks a build that failed while NX Play was in the background, until you open it again.
 - **Allow a Metal compiler nxnative didn't test** (Settings, and `nxplay --allow-other-metal`). nxnative now stops every build when Xcode's Metal compiler isn't the version it tested its shaders with, and a newer Xcode than that is common. The setting is off by default, as nxnative's. When a build stops for this reason, NX Play points to the setting, and `bin/setup --check` reports the mismatch.

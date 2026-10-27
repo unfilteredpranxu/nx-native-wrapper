@@ -4,6 +4,7 @@
 #
 # usage: nxplay [--rebuild] [--build-only] [--ipa | --mac-app] [--fps] [--fullscreen] [--lang <code>] <game folder> [extra build_ipa_from_nsp.py options...]
 #   --build-only   build (when needed) and save the launcher, without starting the game
+#   (a <title ID>_build/keep file stops nxnative updates from rebuilding that build; --rebuild still does)
 #   --ipa          build the iOS IPA instead, into the game folder (needs the NSPs)
 #   --mac-app      pack a standalone Mac app of the game instead, <game name>.app in the game folder (needs the NSPs);
 #                  it keeps its own save in ~/Library/Application Support/nxnative/<title ID>
@@ -250,6 +251,16 @@ start() {
   fi
   exit
 }
+
+# A build marked kept (NX Play's Keep This Build: a keep file in it) plays as it is after an nxnative update, which
+# can break a game that works; only an explicit --rebuild replaces it
+if [[ $rebuild -eq 1 && $explicit_rebuild -eq 0 ]]; then
+  launcher="$(find_launcher)"
+  if [[ -n "$launcher" && -f "$(dirname "$launcher")/keep" ]]; then
+    echo "nxplay: this build is kept (NX Play's Keep This Build): playing it without these nxnative changes"
+    rebuild=0
+  fi
+fi
 
 # A game whose original files were removed to free space (NX Play's Remove Game Files) cannot be rebuilt:
 # after an nxnative update it keeps playing the build it has, rather than failing to rebuild and not starting

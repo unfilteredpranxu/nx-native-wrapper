@@ -5,6 +5,8 @@ import Foundation
 public enum GameScanner {
     static let packageExtensions: Set<String> = ["nsp", "nsz", "xci", "xcz"]
     static let launcherName = "start_mac.sh"
+    /// nxplay's mark of a kept build (Keep This Build).
+    static let keepName = "keep"
 
     public static func scan(root: URL) -> [Game] {
         children(of: root)
@@ -53,6 +55,9 @@ public enum GameScanner {
                 try? $0.folder.appending(path: "run/last_played")
                     .resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
             },
+            isKept: build.map {
+                FileManager.default.fileExists(atPath: $0.folder.appending(path: keepName).path)
+            } ?? false,
             state: state
         )
     }

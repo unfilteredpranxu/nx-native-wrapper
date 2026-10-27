@@ -112,6 +112,21 @@ import Testing
         #expect(GameScanner.scan(root: root).first?.lastPlayed == played)
     }
 
+    @Test func keepThisBuildMarksTheBuildFolder() throws {
+        let folder = try build(game: "Metroid", titleID: "010093801237C000", versions: [0])
+        let extracted = try #require(GameScanner.scan(root: root).first)
+        #expect(!extracted.isKept && !extracted.canKeep)  // nothing that plays to keep yet
+
+        try touch(folder.appending(path: "start_mac.sh"))
+        try touch(folder.appending(path: "tools/dmhost"), executable: true)
+        let ready = try #require(GameScanner.scan(root: root).first)
+        #expect(!ready.isKept && ready.canKeep)
+        #expect(ready.keepFile?.pathComponents.suffix(2) == [folder.lastPathComponent, "keep"])
+
+        try touch(folder.appending(path: "keep"))
+        #expect(GameScanner.scan(root: root).first?.isKept == true)
+    }
+
     // MARK: - Fixtures
 
     private func build(

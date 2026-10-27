@@ -117,6 +117,33 @@ import Testing
         #expect(library.selectedGame?.name == "D Latest")
     }
 
+    @Test func keepThisBuildWritesAndRemovesTheKeepFile() throws {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "nxplay-keep-\(UUID().uuidString)")
+        let build = root.appending(path: "Game/0100000000010000_build")
+        try FileManager.default.createDirectory(
+            at: build.appending(path: "extract/v0"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: build.appending(path: "tools"), withIntermediateDirectories: true)
+        FileManager.default.createFile(
+            atPath: build.appending(path: "start_mac.sh").path, contents: nil)
+        FileManager.default.createFile(
+            atPath: build.appending(path: "tools/dmhost").path, contents: nil,
+            attributes: [.posixPermissions: 0o755])
+        let library = library()
+        library.root = root
+        let keep = build.appending(path: "keep").path
+
+        library.setKept(true, try #require(library.games.first))
+        #expect(FileManager.default.fileExists(atPath: keep))
+        #expect(library.games.first?.isKept == true)
+
+        library.setKept(false, try #require(library.games.first))
+        #expect(!FileManager.default.fileExists(atPath: keep))
+        #expect(library.games.first?.isKept == false)
+        #expect(library.problem == nil)
+    }
+
     @Test func theOtherMetalFailureSuggestsTheSetting() {
         let library = library()
         let job = job("Wonder", .failed(1))
