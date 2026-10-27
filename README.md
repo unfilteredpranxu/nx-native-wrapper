@@ -60,7 +60,11 @@ Switch/
     └── ….nsz
 ```
 
-Extracted games show their icons and a **Play** button; the others have **Extract**, and **Extract All** builds them one after another. The panel at the bottom shows the selected game's output. Right-click a game for more:
+Extracted games show their icons and a **Play** button; the others have **Extract**, and **Extract All** builds them one after another. The panel at the bottom shows the selected game's output. The toolbar switches between the grid and a sortable list (View › as Grid ⌘1 / as List ⌘2).
+
+![The library as a list, with each game's version, title ID and status](docs/list.webp)
+
+Right-click a game for more, or use the **Game** menu:
 
 - **Install on Device**: builds the game with Xcode, signed with your team, then installs and starts it on a connected iPhone or iPad. The device must be paired with Xcode and in Developer Mode.
 - **Build IPA**: an unsigned IPA in the game folder, for AltStore, Sideloadly and the like.
@@ -78,9 +82,13 @@ Extracted games show their icons and a **Play** button; the others have **Extrac
 
 Pick files one by one, a whole game, or a whole kind. Nothing is selected until you pick it, and deleting needs you to type “yes, I'm sure”. Everything is deleted for good, not moved to the Trash.
 
+![Free Up Space: game files, IPAs and Xcode builds per game, with their sizes](docs/free-up-space.webp)
+
 Settings has the nxnative folder, the keys file, the game language, the Apple team for device installs, and Apple's Metal performance HUD. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls.
 
 **On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen, with the games ready to play as a carousel of their artwork, the clock, and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
+
+![Console Mode: the playable games as a carousel, with the controller's button hints](docs/console.webp)
 
 <img src="docs/settings.webp" alt="NX Play's Settings" width="560">
 
@@ -147,7 +155,7 @@ To work in Xcode, run `xcodegen generate` (or `mise run generate`) and open `NXP
 
 `Package.swift` in the root exists only so SourceKit-LSP (Zed, VS Code, …) understands the app's sources; build and test with the Xcode project and `Packages/NXPlayKit`.
 
-`bin/screenshots [games folder]` regenerates the screenshots in `docs/`. It needs a folder with at least one extracted game (default `~/Games/NintendoSwitch`), and it shows that game's name and icon. Everything else is sample data: paths under `~`, an example team and devices, a scripted build log. The data lives in `Screenshots.swift`, which only Debug builds include. It needs `cwebp` (`brew install webp`) and Screen Recording permission for your terminal.
+`bin/screenshots [games folder]` regenerates the screenshots in `docs/`. It needs a folder with at least one extracted game (default `~/Games/Switch`), and it shows the folder's real games, with their names and icons. Everything else is sample data: paths under `~`, an example team, devices and controller, a scripted build log. `bin/screenshots ~/Games/Switch console` redoes just one scene (library, list, console, free-up-space, settings, transfer-saves). The data lives in `Screenshots.swift`, which only Debug builds include. It needs `cwebp` (`brew install webp`) and Screen Recording permission for your terminal.
 
 ## License
 

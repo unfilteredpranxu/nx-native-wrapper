@@ -6,6 +6,7 @@ public struct RootView: View {
     @Environment(Library.self) private var library
     #if DEBUG
         @Environment(\.openSettings) private var openSettings
+        @Environment(\.openWindow) private var openWindow
     #endif
 
     public init() {}
@@ -20,7 +21,8 @@ public struct RootView: View {
             .toolbar { toolbar }
             .toolbar(library.consoleMode ? .hidden : .visible, for: .windowToolbar)
             .background(
-                ConsoleWindowController(consoleMode: library.consoleMode) {
+                // screenshots show Console Mode in the window, at the README's size, not across a whole screen
+                ConsoleWindowController(consoleMode: library.consoleMode && !library.isScreenshot) {
                     library.consoleMode = false
                 }
             )
@@ -39,7 +41,12 @@ public struct RootView: View {
                 library.refreshDevices()
             }
             #if DEBUG
-                .task { if library.screenshotScene == .settings { openSettings() } }
+                .task {
+                    if library.screenshotScene == .settings { openSettings() }
+                    if library.screenshotScene == .freeUpSpace {
+                        openWindow(id: CleanupView.windowID)
+                    }
+                }
             #endif
     }
 

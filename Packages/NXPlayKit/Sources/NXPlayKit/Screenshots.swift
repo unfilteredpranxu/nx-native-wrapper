@@ -10,6 +10,9 @@
     /// no Xcode accounts, and the settings go to a throwaway defaults suite.
     enum ScreenshotScene: String, CaseIterable {
         case library
+        case list
+        case console
+        case freeUpSpace = "free-up-space"
         case settings
         case transferSaves = "transfer-saves"
     }
@@ -57,8 +60,15 @@
             library.devices = Self.devices
             library.root = root
             library.screenshotScene = scene
+            library.allowOtherMetal = true
+            library.showsLog = scene != .list
 
-            guard let game = library.games.first(where: \.isExtracted) else {
+            // the game the scene is about: one built for the Mac, with its icon, else any extracted one
+            let extracted = library.games.filter(\.isExtracted)
+            guard
+                let game = extracted.first(where: { $0.state == .ready && $0.iconURL != nil })
+                    ?? extracted.first
+            else {
                 report("error: no extracted game in \(root.path)")
                 return library
             }
@@ -66,8 +76,16 @@
             switch scene {
             case .library:
                 library.jobs[game.id] = job(for: game, finished: false)
-            case .settings:
-                break  // RootView opens the Settings window
+            case .list:
+                library.viewStyle = .list
+                library.jobs[game.id] = job(for: game, finished: false)
+            case .console:
+                library.gamepad.sample = ("Pro Controller", 0.8)
+                // the middle of the carousel, so games show on both sides
+                library.selection = extracted[extracted.count / 2].id
+                library.consoleMode = true
+            case .freeUpSpace, .settings:
+                break  // RootView opens their windows
             case .transferSaves:
                 library.jobs[game.id] = job(for: game, finished: true)
                 library.transfer = transfer(for: game)
@@ -177,13 +195,16 @@
             let main = windows.max {
                 $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height
             }
-            if let main, scene != .settings {
+            let ownWindow = scene == .settings || scene == .freeUpSpace
+            if let main, !ownWindow {
                 main.setContentSize(Self.windowSize)
                 main.center()
             }
-            try? await Task.sleep(for: .seconds(1.5))  // layout, icons, the sheet's animation
+            // layout, icons, the sheet's animation; full screen and Free Up Space's measuring take longer
+            try? await Task.sleep(
+                for: .seconds(scene == .console || scene == .freeUpSpace ? 4 : 1.5))
             let target =
-                scene == .settings
+                ownWindow
                 ? NSApp.windows.first {
                     $0.isVisible && $0 !== main && $0.sheetParent == nil && $0.level == .normal
                 }

@@ -19,10 +19,14 @@ public final class Gamepad {
     @ObservationIgnored private var held: Command?
     @ObservationIgnored private var repeater: Task<Void, Never>?
 
-    public var name: String? { controller.map { $0.vendorName ?? "Controller" } }
+    /// Screenshot mode: a controller to show, without one connected.
+    var sample: (name: String, battery: Float)?
+
+    public var name: String? { sample?.name ?? controller.map { $0.vendorName ?? "Controller" } }
 
     /// 0…1, when the controller reports its battery.
     public var battery: Float? {
+        if let sample { return sample.battery }
         guard let battery = controller?.battery, battery.batteryState != .unknown else {
             return nil
         }
@@ -47,6 +51,14 @@ public final class Gamepad {
 
     /// The symbol the connected controller prints on a button (Ⓐ, ✕, …), for on-screen hints.
     public func symbol(for command: Command) -> String? {
+        if sample != nil {
+            return switch command {
+            case .confirm: "a.circle"
+            case .back: "b.circle"
+            case .menu: "line.3.horizontal.circle"
+            default: "dpad"
+            }
+        }
         guard let pad = controller?.extendedGamepad else { return nil }
         return switch command {
         case .confirm: pad.buttonA.sfSymbolsName
