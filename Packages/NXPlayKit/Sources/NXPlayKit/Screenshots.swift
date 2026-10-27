@@ -81,9 +81,10 @@
                 library.jobs[game.id] = job(for: game, finished: false)
             case .console:
                 library.gamepad.sample = ("Pro Controller", 0.8)
-                // the middle of the carousel, so games show on both sides
-                library.selection = extracted[extracted.count / 2].id
                 library.consoleMode = true
+                // the middle of the carousel, so games show on both sides
+                let carousel = library.navigableGames
+                library.selection = carousel[carousel.count / 2].id
             case .freeUpSpace, .settings:
                 break  // RootView opens their windows
             case .transferSaves:

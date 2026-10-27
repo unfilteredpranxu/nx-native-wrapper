@@ -30,6 +30,8 @@ public struct Game: Identifiable, Hashable, Sendable {
     public let hasPackages: Bool
     /// A game file Finder is still copying into the folder: nothing may build from it until it's complete.
     public var isCopying = false
+    /// When nxplay last started or ended the game (`run/last_played`); Console Mode puts the latest first.
+    public var lastPlayed: Date? = nil
     public let state: State
 
     public var id: String { folder.path }

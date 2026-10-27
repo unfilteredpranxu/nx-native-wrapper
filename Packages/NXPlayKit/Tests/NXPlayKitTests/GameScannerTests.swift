@@ -101,6 +101,17 @@ import Testing
         #expect(GameScanner.scan(root: root).first?.iconURL?.path.hasSuffix("v0/icon.jpg") == true)
     }
 
+    @Test func readsTheLastPlayFromTheMarkNxplayLeaves() throws {
+        let folder = try build(game: "Metroid", titleID: "010093801237C000", versions: [0])
+        #expect(GameScanner.scan(root: root).first?.lastPlayed == nil)
+
+        let mark = folder.appending(path: "run/last_played")
+        try touch(mark)
+        let played = Date(timeIntervalSince1970: 1_790_000_000)
+        try FileManager.default.setAttributes([.modificationDate: played], ofItemAtPath: mark.path)
+        #expect(GameScanner.scan(root: root).first?.lastPlayed == played)
+    }
+
     // MARK: - Fixtures
 
     private func build(

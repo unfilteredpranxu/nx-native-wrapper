@@ -81,6 +81,42 @@ import Testing
         #expect(names() == "D Built")
     }
 
+    @Test func consoleModeStartsAtTheGamePlayedLast() throws {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "nxplay-played-\(UUID().uuidString)")
+        let now = Date.now
+        for (folder, played) in [
+            ("A Never", nil), ("B Earlier", now.addingTimeInterval(-86_400)), ("C Never", nil),
+            ("D Latest", now), ("E Fresh", nil),
+        ] as [(String, Date?)] {
+            let game = root.appending(path: folder)
+            try FileManager.default.createDirectory(at: game, withIntermediateDirectories: true)
+            try Data([1]).write(to: game.appending(path: "\(folder).nsp"))
+            guard folder != "E Fresh" else { continue }  // not extracted: not in the carousel
+            let build = game.appending(path: "0100000000010000_build")
+            try FileManager.default.createDirectory(
+                at: build.appending(path: "extract/v0"), withIntermediateDirectories: true)
+            if let played {
+                let mark = build.appending(path: "run/last_played")
+                try FileManager.default.createDirectory(
+                    at: mark.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data().write(to: mark)
+                try FileManager.default.setAttributes(
+                    [.modificationDate: played], ofItemAtPath: mark.path)
+            }
+        }
+        let library = library()
+        library.root = root
+        library.selection = library.games.first { $0.name == "A Never" }?.id
+
+        // the grid keeps name order; the carousel puts the latest play first, the never played after by name
+        #expect(library.navigableGames.first?.name == "A Never")
+        library.consoleMode = true
+        #expect(
+            library.navigableGames.map(\.name) == ["D Latest", "B Earlier", "A Never", "C Never"])
+        #expect(library.selectedGame?.name == "D Latest")
+    }
+
     @Test func theOtherMetalFailureSuggestsTheSetting() {
         let library = library()
         let job = job("Wonder", .failed(1))

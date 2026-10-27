@@ -234,13 +234,21 @@ start() {
   if [[ $build_only -eq 1 ]]; then exit 0; fi
   if [[ $fps -eq 1 ]]; then export DM_METAL_HUD=1; fi
   if [[ $fullscreen -eq 1 ]]; then export DM_FULLSCREEN=1; fi
+  # NX Play orders Console Mode by the last play: marked at the start and, through the EXIT trap, at the end,
+  # however the game ends (quit, crash, NX Play's stop). Hence no exec: bash stays to run the trap.
+  played="$(dirname "$1")/run/last_played"
+  mkdir -p "$(dirname "$played")"
+  touch "$played"
+  trap 'touch "$played"' EXIT
   if [[ -n "$lang" ]]; then
     # the launcher sets DM_LANG inline, which beats the environment: swap the value in its command
     echo "game language: $lang"
     export DM_LANG="$lang"
-    exec bash -c "$(sed -E "s/(^| )DM_LANG=[^ ]*/\1DM_LANG=$lang/" "$1")"
+    bash -c "$(sed -E "s/(^| )DM_LANG=[^ ]*/\1DM_LANG=$lang/" "$1")"
+  else
+    bash "$1"
   fi
-  exec bash "$1"
+  exit
 }
 
 # A game whose original files were removed to free space (NX Play's Remove Game Files) cannot be rebuilt:
@@ -299,5 +307,5 @@ printf '#!/bin/sh\n# written by nxplay from the build output\n%s\n' "$cmd" > "$l
 chmod +x "$launcher"
 
 echo "saved: $launcher"
-rm -f "$log"   # exec skips the EXIT trap
+rm -f "$log"   # start replaces the EXIT trap
 start "$launcher"

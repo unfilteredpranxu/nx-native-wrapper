@@ -78,7 +78,10 @@ public final class Library {
     /// The save transfer sheet, when open.
     public var transfer: SaveTransfer?
     /// Console Mode: the window full screen, the games as a carousel for the couch and a controller.
-    public var consoleMode = false
+    public var consoleMode = false {
+        // the carousel starts at the game played last
+        didSet { if consoleMode, !oldValue { selection = navigableGames.first?.id } }
+    }
     /// The controller as a remote: moves the selection, plays, toggles Console Mode.
     public let gamepad = Gamepad()
 
@@ -208,11 +211,12 @@ public final class Library {
     // MARK: - Navigation (controller, Console Mode keys)
 
     /// The games in the order the grid shows them, extracted first, then the rest; Console Mode only has the
-    /// extracted ones, the games it can play.
+    /// extracted ones, the games it can play, the last played first and the never played after them by name.
     public var navigableGames: [Game] {
-        consoleMode
-            ? games.filter(\.isExtracted)
-            : games.filter(\.isExtracted) + games.filter { !$0.isExtracted }
+        let extracted = games.filter(\.isExtracted)
+        guard consoleMode else { return extracted + games.filter { !$0.isExtracted } }
+        return extracted.filter { $0.lastPlayed != nil }.sorted { $0.lastPlayed! > $1.lastPlayed! }
+            + extracted.filter { $0.lastPlayed == nil }
     }
 
     /// One step through the games; with nothing selected, the first one.
@@ -238,12 +242,7 @@ public final class Library {
             primaryAction(for: game)
         case .back:
             if transfer != nil { transfer = nil } else if consoleMode { consoleMode = false }
-        case .menu:
-            consoleMode.toggle()
-            // the carousel has no unextracted games: don't leave one selected in it
-            if consoleMode, selectedGame?.isExtracted != true {
-                selection = navigableGames.first?.id
-            }
+        case .menu: consoleMode.toggle()
         }
     }
 

@@ -49,6 +49,10 @@ public enum GameScanner {
             hasPackages: hasPackages,
             // a copied folder carries the mark on itself, a copied file on itself
             isCopying: isBeingCopied(folder) || packages.contains(where: isBeingCopied),
+            lastPlayed: build.flatMap {
+                try? $0.folder.appending(path: "run/last_played")
+                    .resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+            },
             state: state
         )
     }

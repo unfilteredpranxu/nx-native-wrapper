@@ -38,13 +38,7 @@ struct ConsoleView: View {
         .focusable()
         .focused($focused)
         .focusEffectDisabled()
-        .onAppear {
-            focused = true
-            // a game selected in the library that isn't in the carousel (not extracted): start at the first
-            if !games.contains(where: { $0.id == library.selection }) {
-                library.selection = games.first?.id
-            }
-        }
+        .onAppear { focused = true }
         .onKeyPress(.leftArrow) {
             library.handle(.left)
             return .handled
@@ -217,6 +211,10 @@ private struct Details: View {
                 GameBadge(game: game, job: job).scaleEffect(1.3)
                 if let version = game.version {
                     Text("v\(version)").foregroundStyle(.white.opacity(0.7))
+                }
+                if let played = game.lastPlayed {
+                    Text("Played \(played, format: .relative(presentation: .named))")
+                        .foregroundStyle(.white.opacity(0.7))
                 }
             }
             .font(.title3)
