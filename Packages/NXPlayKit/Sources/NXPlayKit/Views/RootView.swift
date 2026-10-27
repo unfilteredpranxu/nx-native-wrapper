@@ -26,6 +26,7 @@ public struct RootView: View {
                     library.consoleMode = false
                 }
             )
+            .background(DockProgress())
             .sheet(item: Bindable(library).transfer) { transfer in
                 TransferSavesView(transfer: transfer)
             }
@@ -39,6 +40,7 @@ public struct RootView: View {
             ) { _ in
                 library.refresh()
                 library.refreshDevices()
+                NSApp.dockTile.badgeLabel = nil  // a failure seen
             }
             #if DEBUG
                 .task {

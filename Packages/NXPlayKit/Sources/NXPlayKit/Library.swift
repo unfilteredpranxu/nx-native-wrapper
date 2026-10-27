@@ -283,6 +283,8 @@ public final class Library {
         if case .failed = job.status {
             showsLog = true
             selection = job.game.id
+            // in the background: a badge on the Dock icon until NX Play is opened again
+            if !isScreenshot, NSApp?.isActive == false { NSApp.dockTile.badgeLabel = "!" }
             if !allowOtherMetal,
                 job.log.lines.contains(where: { $0.text.contains(Self.otherMetalMarker) })
             {
