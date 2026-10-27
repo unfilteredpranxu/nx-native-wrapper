@@ -12,6 +12,8 @@
 #                  (and --bundle-id) after the game folder
 #   --fps          Apple's Metal performance HUD over the game (DM_METAL_HUD=1): frame rate, frame and GPU time, memory
 #   --fullscreen   start the game's window in full screen (DM_FULLSCREEN=1); ⌃⌘F or the green button leave it
+#   --allow-other-metal  build shaders with this Mac's Metal compiler even when nxnative tested another one
+#                  (nxnative's own --allow-other-metal, passed to every build; issue #242)
 #   --lang <code>  game language for this run (DM_LANG: en-US, ja, fr, de, zh-Hans, ...); it must be one the game has
 # env:   NXNATIVE (repository; default ./nxnative in this checkout, as bin/setup clones it, else ../nxnative beside it),
 #        NXPLAY_VENV (Python environment; default .venv in this checkout, made by bin/setup), NX_KEYS (default ~/.switch/prod.keys)
@@ -32,7 +34,7 @@ else
 fi
 launcher_name=start_mac.sh
 
-rebuild=0 explicit_rebuild=0 fps=0 fullscreen=0 build_only=0 ipa=0 mac_app=0 lang="" device=""
+rebuild=0 explicit_rebuild=0 fps=0 fullscreen=0 other_metal=() build_only=0 ipa=0 mac_app=0 lang="" device=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --rebuild) rebuild=1 explicit_rebuild=1; shift ;;
@@ -42,6 +44,7 @@ while [[ $# -gt 0 ]]; do
     --device) device="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     --fps) fps=1; shift ;;
     --fullscreen) fullscreen=1; shift ;;
+    --allow-other-metal) other_metal=(--allow-other-metal); shift ;;
     --lang) lang="${2:-}"; shift $(( $# > 1 ? 2 : 1 )) ;;
     *) break ;;
   esac
@@ -55,7 +58,7 @@ if [[ -n "$device" && ! "$device" =~ ^[0-9A-Fa-f-]+$ ]]; then
   exit 2
 fi
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa | --mac-app | --device <udid>] [--fps] [--fullscreen] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
+  echo "usage: $(basename "$0") [--rebuild] [--build-only] [--ipa | --mac-app | --device <udid>] [--fps] [--fullscreen] [--allow-other-metal] [--lang <code>] <game folder> [build_ipa_from_nsp.py options...]" >&2
   exit 2
 fi
 game="$(cd "$1" && pwd)"; shift
@@ -115,7 +118,7 @@ fi
 if [[ $ipa -eq 1 ]]; then
   # the script's own default output (<game folder>/<the profile's IPA name>); it reuses every step a Mac build made
   cd "$repo"
-  exec python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" ${lang:+--language "$lang"} "$@"
+  exec python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" ${lang:+--language "$lang"} ${other_metal[@]+"${other_metal[@]}"} "$@"
 fi
 
 if [[ $mac_app -eq 1 ]]; then
@@ -123,7 +126,7 @@ if [[ $mac_app -eq 1 ]]; then
   cd "$repo"
   out="$(mktemp -t nxplay-macapp)"
   trap 'rm -f "$out"' EXIT
-  pack() { python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --platform mac-app ${lang:+--language "$lang"} "$@" 2>&1 | tee "$out"; return "${PIPESTATUS[0]}"; }
+  pack() { python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --platform mac-app ${lang:+--language "$lang"} ${other_metal[@]+"${other_metal[@]}"} "$@" 2>&1 | tee "$out"; return "${PIPESTATUS[0]}"; }
   if pack "$@"; then exit 0; fi
   # a game whose shader pairs leave no pipeline base (ANIMAL WELL) stops pso_offline.py with an error instead of
   # "no archive": pack the app without one (--gpu none); it builds what it needs on its first start
@@ -140,7 +143,7 @@ stage() { stage_t0=$SECONDS; echo "[$(date +%T)] [$1/3] $2 …"; }
 stage_done() { local s=$(( SECONDS - stage_t0 )); printf '[%s] ✓ [%s/3] %s (%d:%02d)\n' "$(date +%T)" "$1" "$2" $(( s / 60 )) $(( s % 60 )); }
 
 if [[ -n "$device" ]]; then
-  (cd "$repo" && python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --prepare-xcode ${lang:+--language "$lang"} "$@")
+  (cd "$repo" && python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --prepare-xcode ${lang:+--language "$lang"} ${other_metal[@]+"${other_metal[@]}"} "$@")
 
   project=""
   for p in "$game"/*_build/xcode/DmIOS.xcodeproj; do
@@ -279,7 +282,7 @@ if [[ -t 1 ]]; then
   export COLUMNS="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
 fi
 
-(cd "$repo" && python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --platform mac ${progress[@]+"${progress[@]}"} "$@") | tee "$log"
+(cd "$repo" && python3 scripts/build_ipa_from_nsp.py "$game" -k "$keys" --platform mac ${progress[@]+"${progress[@]}"} ${other_metal[@]+"${other_metal[@]}"} "$@") | tee "$log"
 
 # The run command is the line after "done: the game runs on the Mac with this command";
 # drop the bar's carriage-return redraws in front of it.

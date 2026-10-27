@@ -30,9 +30,11 @@ public struct SettingsView: View {
                 PathField(
                     title: "prod.keys", path: $library.keysPath, directory: false,
                     isValid: exists(library.keysPath))
+                Toggle(
+                    "Allow a Metal compiler nxnative didn't test", isOn: $library.allowOtherMetal)
             } footer: {
                 Text(
-                    "nxplay pulls nxnative before each run and rebuilds a game when new commits arrive."
+                    "nxplay pulls nxnative before each run and rebuilds a game when new commits arrive. nxnative stops a build when this Mac's Metal compiler (Xcode's) isn't the one it tested its shaders with; the toggle builds anyway, at the risk of shader glitches (nxnative issue #242)."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)

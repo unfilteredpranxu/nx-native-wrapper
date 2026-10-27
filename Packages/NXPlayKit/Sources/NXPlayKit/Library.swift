@@ -27,6 +27,7 @@ public final class Library {
         static let logHeight = "logHeight"
         static let viewStyle = "viewStyle"
         static let fullScreenGames = "fullScreenGames"
+        static let allowOtherMetal = "allowOtherMetal"
     }
 
     /// The games as cards with their icons, or as a sortable list.
@@ -48,6 +49,11 @@ public final class Library {
     /// Start games in full screen (nxplay --fullscreen); always from Console Mode.
     public var fullScreenGames: Bool {
         didSet { defaults.set(fullScreenGames, forKey: Keys.fullScreenGames) }
+    }
+    /// Build shaders with this Mac's Metal compiler when nxnative tested another (its --allow-other-metal):
+    /// off by default, as nxnative's; a newer Xcode than nxnative's tested one stops every build otherwise.
+    public var allowOtherMetal: Bool {
+        didSet { defaults.set(allowOtherMetal, forKey: Keys.allowOtherMetal) }
     }
     /// Preferred game language (a DM_LANG code); empty keeps each game's build language.
     public var language: String { didSet { defaults.set(language, forKey: Keys.language) } }
@@ -108,6 +114,7 @@ public final class Library {
         keysPath = defaults.string(forKey: Keys.keys) ?? NSHomeDirectory() + "/.switch/prod.keys"
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
         fullScreenGames = defaults.bool(forKey: Keys.fullScreenGames)
+        allowOtherMetal = defaults.bool(forKey: Keys.allowOtherMetal)
         language = defaults.string(forKey: Keys.language) ?? ""
         teamID = defaults.string(forKey: Keys.team) ?? ""
         showsLog = defaults.object(forKey: Keys.showsLog) as? Bool ?? true
@@ -276,6 +283,15 @@ public final class Library {
         if case .failed = job.status {
             showsLog = true
             selection = job.game.id
+            if !allowOtherMetal,
+                job.log.lines.contains(where: { $0.text.contains(Self.otherMetalMarker) })
+            {
+                problem = """
+                    This Mac's Metal compiler is newer than the one nxnative tested its shaders with, so nxnative \
+                    stopped the build. Install the Xcode version it names, or turn on “Allow a Metal compiler \
+                    nxnative didn't test” in Settings to build with this one anyway.
+                    """
+            }
         }
         startNextExtraction()
     }
@@ -340,8 +356,13 @@ public final class Library {
             // a Personal Team cannot provision the Increased Memory Limit capability: build without it
             if team.isFree { environment["DM_ENTITLEMENTS"] = "" }
         }
+        // an nxplay option, before the game folder (a play can rebuild too)
+        if allowOtherMetal { arguments.insert("--allow-other-metal", at: 0) }
         return NXPlayCommand(script: script, arguments: arguments, environment: environment)
     }
+
+    /// build_ipa_from_nsp.py's message when this Mac's Metal compiler isn't the tested one (dmsh_chain.lock).
+    static let otherMetalMarker = "Metal compiler is not the one the shaders were tested with"
 
     /// App IDs are unique across all teams, so nxnative's default org.nxnative.<title ID> may already
     /// belong to someone else: put the team in it. Stable, so a reinstall updates the same app and keeps its saves.

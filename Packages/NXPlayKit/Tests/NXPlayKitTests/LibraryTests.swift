@@ -81,6 +81,23 @@ import Testing
         #expect(names() == "D Built")
     }
 
+    @Test func theOtherMetalFailureSuggestsTheSetting() {
+        let library = library()
+        let job = job("Wonder", .failed(1))
+        job.showScreenshot(
+            [
+                "[RED] this Mac's Metal compiler is not the one the shaders were tested with (dm/gfx/tools/dmsh_chain.lock): …"
+            ], status: .failed(1))
+
+        library.finished(job)
+        #expect(library.problem?.contains("Allow a Metal compiler") == true)
+
+        library.problem = nil
+        library.allowOtherMetal = true
+        library.finished(job)
+        #expect(library.problem == nil)  // already on: the log says the rest
+    }
+
     @Test func menuTogglesConsoleModeAndBackLeavesIt() {
         let library = library()
         library.handle(.menu)

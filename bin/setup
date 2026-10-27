@@ -93,6 +93,14 @@ if [[ ! -f "$repo/scripts/build_ipa_from_nsp.py" ]]; then
 fi
 if [[ -f "$repo/scripts/build_ipa_from_nsp.py" ]]; then
   ok "$(cd "$repo" && pwd) ($(git -C "$repo" log -1 --format='%h, %cr'))"
+  # nxnative builds shaders only with the Metal compiler it tested (dmsh_chain.lock), unless allowed
+  tested="$(awk -F'\t' '$1 == "metal_macosx" { print $2 }' "$repo/dm/gfx/tools/dmsh_chain.lock" 2>/dev/null)"
+  here="$(xcrun metal --version 2>/dev/null | head -1)"
+  if [[ -n "$tested" && -n "$here" && "$here" != "$tested" ]]; then
+    warn "Metal compiler ${here#Apple metal version } isn't the one nxnative tested (${tested#Apple metal version }): builds stop unless you allow it in NX Play's Settings (Allow a Metal compiler nxnative didn't test), or pass nxplay --allow-other-metal"
+  elif [[ -n "$tested" && -n "$here" ]]; then
+    ok "Metal compiler matches the one nxnative tested"
+  fi
 fi
 
 section "Keys"
