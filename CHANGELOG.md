@@ -12,6 +12,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 - **Search games:** the toolbar's search field (Edit › Find Games…, ⌘F) narrows the grid and the list to the games with every word you type in their name, title ID or folder name. Console Mode still shows every game.
 
+- **Game artwork in Console Mode:** the backdrop is the selected game's official eShop banner instead of its blurred icon. When Console Mode opens, NX Play downloads the banners it doesn't have yet. It looks them up by title ID in the community database [blawar/titledb](https://github.com/blawar/titledb), the same source NX2Apple uses, and takes the images only from Nintendo's image server. The banners stay in `~/Library/Caches/com.varyform.nxplay/Banners`. Games without one keep the blurred icon.
+
 ## 1.7.6 — 2026-10-29
 
 ### Added

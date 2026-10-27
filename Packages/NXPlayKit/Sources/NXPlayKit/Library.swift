@@ -85,8 +85,15 @@ public final class Library {
     /// Console Mode: the window full screen, the games as a carousel for the couch and a controller.
     public var consoleMode = false {
         // the carousel starts at the game played last
-        didSet { if consoleMode, !oldValue { selection = navigableGames.first?.id } }
+        didSet {
+            if consoleMode, !oldValue {
+                selection = navigableGames.first?.id
+                fetchBanners()
+            }
+        }
     }
+    /// The games' eShop banners on disk, by title ID: Console Mode's backdrop (ArtworkStore).
+    public private(set) var banners: [String: URL] = [:]
     /// The controller as a remote: moves the selection, plays, toggles Console Mode.
     public let gamepad = Gamepad()
     /// Updates from GitHub releases (a released app only).
@@ -103,6 +110,8 @@ public final class Library {
     public private(set) var quitsWhenIdle = false
     /// File work outside the jobs that quitting would cut short: Free Up Space deleting, a save transfer copying.
     @ObservationIgnored private var tasksInFlight = 0
+    @ObservationIgnored let artwork: ArtworkStore
+    @ObservationIgnored private var bannerFetch: Task<Void, Never>?
     /// Screenshot mode (Screenshots.swift): sample teams and devices that Xcode and devicectl must not replace.
     @ObservationIgnored let isScreenshot: Bool
     #if DEBUG
@@ -122,9 +131,11 @@ public final class Library {
         self.init(defaults: defaults, isScreenshot: false)
     }
 
-    init(defaults: UserDefaults, isScreenshot: Bool) {
+    init(defaults: UserDefaults, isScreenshot: Bool, artwork: ArtworkStore = ArtworkStore()) {
         self.defaults = defaults
         self.isScreenshot = isScreenshot
+        self.artwork = artwork
+        banners = artwork.cachedBanners()
         root = defaults.string(forKey: Keys.root).map {
             URL(filePath: $0, directoryHint: .isDirectory)
         }
@@ -299,6 +310,26 @@ public final class Library {
             : URL(
                 filePath: (saveBackupPath as NSString).expandingTildeInPath,
                 directoryHint: .isDirectory)
+    }
+
+    public func banner(for game: Game) -> URL? {
+        game.titleID.flatMap { banners[$0.uppercased()] }
+    }
+
+    /// Downloads the banners of the games Console Mode shows that have none yet; only when Console Mode opens, so
+    /// NX Play goes online for artwork only once it is used. Screenshots use what is on disk.
+    func fetchBanners() {
+        guard !isScreenshot, bannerFetch == nil else { return }
+        let wanted = Set(
+            games.filter(\.isExtracted).compactMap { $0.titleID?.uppercased() }
+        ).subtracting(banners.keys)
+        guard !wanted.isEmpty else { return }
+        bannerFetch = Task { [weak self, artwork] in
+            let got = await artwork.fetch(wanted)
+            guard let self else { return }
+            banners.merge(got) { $1 }
+            bannerFetch = nil
+        }
     }
 
     public func chooseRoot() {

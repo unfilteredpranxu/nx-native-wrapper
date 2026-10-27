@@ -14,7 +14,7 @@ struct ConsoleView: View {
         let games = library.navigableGames  // the extracted ones
         let selected = games.first { $0.id == library.selection } ?? games.first
         ZStack {
-            Backdrop(game: selected)
+            Backdrop(game: selected, banner: selected.flatMap(library.banner(for:)))
             VStack(spacing: 0) {
                 TopBar(gamepad: library.gamepad)
                     .padding(.horizontal, 56)
@@ -71,16 +71,26 @@ struct ConsoleView: View {
     }
 }
 
-/// The selected game's artwork, blurred over the whole screen, cross-fading as the selection moves.
+/// The selected game's eShop banner over the whole screen, softened so the tiles and the title read over it; without
+/// one, its icon, blurred into colour. It cross-fades as the selection moves.
 private struct Backdrop: View {
     let game: Game?
+    let banner: URL?
 
     var body: some View {
         // the artwork as an overlay of a flexible colour: in a ZStack, scaledToFill sized the whole screen to the
         // square image, pushing the top bar and the hints out of a wide window
         Color.black
             .overlay {
-                if let url = game?.iconURL, let image = IconCache.image(at: url) {
+                if let banner, let image = IconCache.image(at: banner) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .blur(radius: 12)
+                        .opacity(0.85)
+                        .id(banner)
+                        .transition(.opacity)
+                } else if let url = game?.iconURL, let image = IconCache.image(at: url) {
                     Image(nsImage: image)
                         .resizable()
                         .scaledToFill()
