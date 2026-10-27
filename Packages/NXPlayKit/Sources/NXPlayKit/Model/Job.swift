@@ -48,6 +48,11 @@ public final class Job: Identifiable {
         status == .running && progress.map { !$0.isLastStageDone } == true
     }
 
+    /// A line from NX Play itself in the run's log (the save backup's).
+    func note(_ line: String) {
+        log.append([line])
+    }
+
     func start() {
         guard status == .queued else { return }
         status = .running

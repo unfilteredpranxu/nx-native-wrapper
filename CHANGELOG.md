@@ -4,6 +4,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+### Added
+
+- **Save backup to a private Git repository** (Settings): pick a clone of your own repository. While a game plays, NX Play copies its save into a folder named after the game and its title ID each time the game saves, then commits and pushes. It does this once more when the game quits. If another Mac pushed in the meantime, its commits are pulled in first. Pushing uses your own Git credentials, and each backup shows in the log.
+
 ## 1.6 — 2026-10-27
 
 ### Added

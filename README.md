@@ -5,6 +5,7 @@
 - A library of your games with their icons: extract them, play them on the Mac, rebuild them.
 - Install a game on your iPhone or iPad through Xcode, or build an IPA to sideload.
 - Copy saves between the Mac and a device, after seeing which one is newer.
+- Back up saves to your own private Git repository while you play.
 - Pull nxnative's latest fixes before each run, and rebuild only when they change something.
 
 > You need your own games (NSP, NSZ, XCI or XCZ files) and the `prod.keys` of your own Switch. Nothing here downloads games or keys.
@@ -71,6 +72,7 @@ Right-click a game for more, or use the **Game** menu:
 - **Make Mac App**: a standalone, double-clickable app of the game (nxnative's `--platform mac-app`) in the game folder, for the Dock or Launchpad. It's made of APFS clones of the extracted files, so it takes almost no space on the same volume. It keeps its own save in `~/Library/Application Support/nxnative/<title ID>`, separate from NX Play's.
 - **Transfer Saves**: compares the Mac's save with a device's, file by file, and copies one over the other. The replaced save is kept in `<title ID>_build/run/save-backups`.
 - **Show in Finder**, **Open Save Folder**, **Open Build Logs**.
+- **Save backup** (Settings): pick a clone of your own private Git repository. While a game plays, NX Play copies its save into a folder named after the game and its title ID (`the-legend-of-zelda-tears-of-the-kingdom-0100f2c0115b6000`) each time the game saves, then commits and pushes. It does this once more when the game quits. Pushing uses your own Git setup (SSH agent or keychain) and never prompts. The log shows each backup. Games started from the Terminal with `nxplay` aren't backed up.
 
 ![Transfer Saves: the Mac's save is newer than the iPad's](docs/transfer-saves.webp)
 

@@ -59,6 +59,19 @@ public struct SettingsView: View {
                 .foregroundStyle(.secondary)
             }
             Section {
+                PathField(
+                    title: "Save backup repository", path: $library.saveBackupPath, directory: true,
+                    isValid: library.saveBackupPath.isEmpty
+                        ? nil : exists(library.saveBackupPath, ".git"),
+                    prompt: "None")
+            } footer: {
+                Text(
+                    "A clone of your own private Git repository. While a game plays, NX Play copies its save into a folder named after it (the-game-name-<title ID>) once the game has saved, commits it and pushes, with your Git credentials. Empty: no backup."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Section {
                 Picker("Apple team", selection: $library.teamID) {
                     Text(library.team.map { "Automatic (\($0.name))" } ?? "None in Xcode").tag("")
                     Divider()
@@ -90,19 +103,24 @@ private struct PathField: View {
     let title: LocalizedStringKey
     @Binding var path: String
     let directory: Bool
-    let isValid: Bool
+    /// Nil for an optional field left empty: no mark.
+    let isValid: Bool?
+    var prompt: LocalizedStringKey? = nil
 
     var body: some View {
         LabeledContent(title) {
             HStack {
-                TextField(title, text: $path)
+                TextField(title, text: $path, prompt: prompt.map { Text($0) })
                     .labelsHidden()
                     .textFieldStyle(.roundedBorder)
-                Image(
-                    systemName: isValid ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-                )
-                .foregroundStyle(isValid ? .green : .orange)
-                .help(isValid ? "Found" : "Not found")
+                if let isValid {
+                    Image(
+                        systemName: isValid
+                            ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                    )
+                    .foregroundStyle(isValid ? .green : .orange)
+                    .help(isValid ? "Found" : "Not found")
+                }
                 Button("Choose…") {
                     if let url = PathPicker.choose(directory: directory, startingAt: path) {
                         path = url.path

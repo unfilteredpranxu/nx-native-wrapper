@@ -27,6 +27,7 @@ public final class Library {
         static let logHeight = "logHeight"
         static let viewStyle = "viewStyle"
         static let fullScreenGames = "fullScreenGames"
+        static let saveBackup = "saveBackupRepository"
         static let allowOtherMetal = "allowOtherMetal"
     }
 
@@ -44,6 +45,10 @@ public final class Library {
     }
     public var nxnativePath: String { didSet { defaults.set(nxnativePath, forKey: Keys.nxnative) } }
     public var keysPath: String { didSet { defaults.set(keysPath, forKey: Keys.keys) } }
+    /// A clone of the player's private repository that saves are backed up to while games play; empty for none.
+    public var saveBackupPath: String {
+        didSet { defaults.set(saveBackupPath, forKey: Keys.saveBackup) }
+    }
     /// Play with Apple's Metal performance HUD (nxplay --fps).
     public var metalHUD: Bool { didSet { defaults.set(metalHUD, forKey: Keys.metalHUD) } }
     /// Start games in full screen (nxplay --fullscreen); always from Console Mode.
@@ -88,6 +93,7 @@ public final class Library {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var queue: [Job] = []
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
+    @ObservationIgnored private let saveBackup = SaveBackup()
     /// Screenshot mode (Screenshots.swift): sample teams and devices that Xcode and devicectl must not replace.
     @ObservationIgnored let isScreenshot: Bool
     #if DEBUG
@@ -115,6 +121,7 @@ public final class Library {
         }
         nxnativePath = defaults.string(forKey: Keys.nxnative) ?? Self.defaultNXNative
         keysPath = defaults.string(forKey: Keys.keys) ?? NSHomeDirectory() + "/.switch/prod.keys"
+        saveBackupPath = defaults.string(forKey: Keys.saveBackup) ?? ""
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
         fullScreenGames = defaults.bool(forKey: Keys.fullScreenGames)
         allowOtherMetal = defaults.bool(forKey: Keys.allowOtherMetal)
@@ -171,6 +178,15 @@ public final class Library {
             copyWatch = nil
             refresh()
         }
+    }
+
+    /// Where saves go, when Settings names a folder.
+    var saveBackupRepository: URL? {
+        saveBackupPath.isEmpty
+            ? nil
+            : URL(
+                filePath: (saveBackupPath as NSString).expandingTildeInPath,
+                directoryHint: .isDirectory)
     }
 
     public func chooseRoot() {
@@ -281,6 +297,7 @@ public final class Library {
         if select { selection = game.id }
         if kind == .play {
             job.start()
+            if let repo = saveBackupRepository { saveBackup.watch(job, into: repo) }
         } else {
             queue.append(job)
             startNextExtraction()
