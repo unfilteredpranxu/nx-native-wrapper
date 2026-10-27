@@ -74,24 +74,28 @@ private struct Backdrop: View {
     let game: Game?
 
     var body: some View {
-        ZStack {
-            Color.black
-            if let url = game?.iconURL, let image = IconCache.image(at: url) {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .blur(radius: 70)
-                    .saturation(1.4)
-                    .opacity(0.75)
-                    .id(url)
-                    .transition(.opacity)
+        // the artwork as an overlay of a flexible colour: in a ZStack, scaledToFill sized the whole screen to the
+        // square image, pushing the top bar and the hints out of a wide window
+        Color.black
+            .overlay {
+                if let url = game?.iconURL, let image = IconCache.image(at: url) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .blur(radius: 70)
+                        .saturation(1.4)
+                        .opacity(0.75)
+                        .id(url)
+                        .transition(.opacity)
+                }
             }
-            LinearGradient(
-                colors: [.black.opacity(0.25), .black.opacity(0.55), .black.opacity(0.9)],
-                startPoint: .top, endPoint: .bottom)
-        }
-        .animation(.easeInOut(duration: 0.45), value: game?.id)
-        .clipped()
+            .overlay {
+                LinearGradient(
+                    colors: [.black.opacity(0.25), .black.opacity(0.55), .black.opacity(0.9)],
+                    startPoint: .top, endPoint: .bottom)
+            }
+            .animation(.easeInOut(duration: 0.45), value: game?.id)
+            .clipped()
     }
 }
 
