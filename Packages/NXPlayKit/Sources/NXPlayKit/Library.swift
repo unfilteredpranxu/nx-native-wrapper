@@ -185,10 +185,9 @@ public final class Library {
         var env = NXPlayCommand.environment(
             nxnative: (nxnativePath as NSString).expandingTildeInPath,
             keys: (keysPath as NSString).expandingTildeInPath, venv: AppHome.venv.path)
-        if AppHome.sourceRoot == nil {
-            env["NXPLAY_HOME"] = AppHome.folder.path
-            if let project = AppHome.setupProject { env["NXPLAY_PROJECT"] = project.path }
-        }
+        // the bundled setup reads the files bundled beside it, for a checkout build too
+        if let project = AppHome.setupProject { env["NXPLAY_PROJECT"] = project.path }
+        if AppHome.sourceRoot == nil { env["NXPLAY_HOME"] = AppHome.folder.path }
         if let askpass = AppHome.setupProject?.appending(path: "askpass") {
             env["SUDO_ASKPASS"] = askpass.path
         }

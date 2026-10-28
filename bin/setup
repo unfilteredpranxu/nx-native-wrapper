@@ -15,7 +15,10 @@
 #   NXNATIVE        the nxnative checkout (default: ./nxnative, else ../nxnative)
 #   SUDO_ASKPASS    a password prompt: the .NET SDK's installer and Xcode's first launch then run without a terminal
 set -euo pipefail
-project="${NXPLAY_PROJECT:-$(cd "$(dirname "$0")/.." && pwd)}"
+# the checkout keeps the Brewfile above bin/; the app's bundled copy (Resources/Setup) keeps it beside the script
+here="$(cd "$(dirname "$0")" && pwd)"
+if [[ -f "$here/Brewfile" ]]; then default_project="$here"; else default_project="$(dirname "$here")"; fi
+project="${NXPLAY_PROJECT:-$default_project}"
 cd "$project"
 app_run=0
 [[ -n "${NXPLAY_HOME:-}" ]] && app_run=1
@@ -88,7 +91,7 @@ elif (( check )); then
 else
   step "Homebrew tools (Brewfile)" "brew bundle failed" brew bundle --file Brewfile --no-upgrade
 fi
-if (( !app_run )) && command -v mise > /dev/null; then
+if (( !app_run )) && [[ -f mise.toml ]] && command -v mise > /dev/null; then
   if (( check )); then ok "mise: $(mise --version 2>/dev/null | awk '{print $1}') (mise.toml)"
   else mise trust --quiet 2>/dev/null; step "mise tools (mise.toml)" "mise install failed" mise install --quiet; fi
 fi
