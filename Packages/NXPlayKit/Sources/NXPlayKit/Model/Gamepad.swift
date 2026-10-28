@@ -22,7 +22,27 @@ public final class Gamepad {
     /// Screenshot mode: a controller to show, without one connected.
     var sample: (name: String, battery: Float)?
 
-    public var name: String? { sample?.name ?? controller.map { $0.vendorName ?? "Controller" } }
+    public var name: String? {
+        sample?.name
+            ?? controller.map {
+                Self.displayName(vendor: $0.vendorName, category: $0.productCategory)
+            }
+    }
+
+    /// The controller's own name, unless it is a generic one: an Xbox controller on a USB cable calls itself just
+    /// "Controller" (its USB product name; "Xbox Wireless Controller" over Bluetooth), while GameController still
+    /// knows its kind (productCategory "Xbox One"). Then the kind, worded as players know it.
+    nonisolated static func displayName(vendor: String?, category: String) -> String {
+        let vendor = vendor?.trimmingCharacters(in: .whitespaces) ?? ""
+        let generic: Set<String> = ["", "controller", "gamepad", "game controller", "usb gamepad"]
+        guard generic.contains(vendor.lowercased()) else { return vendor }
+        switch category {
+        case GCProductCategoryXboxOne: return "Xbox Controller"
+        case "", GCProductCategoryHID, GCProductCategoryMFi:
+            return vendor.isEmpty ? "Controller" : vendor
+        default: return category  // DualSense, DualShock 4, Switch Pro Controller, …
+        }
+    }
 
     /// 0…1, when the controller reports its battery.
     public var battery: Float? {
