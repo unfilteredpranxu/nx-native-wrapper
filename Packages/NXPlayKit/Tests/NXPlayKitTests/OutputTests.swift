@@ -33,36 +33,80 @@ import Testing
     }
 }
 
-@Suite struct BuildProgressTests {
-    @Test func stageStart() throws {
-        let p = try #require(BuildProgress(line: "[07:48:00] [3/9] shader split · reading …"))
-        #expect(p.stage == 3 && p.stages == 9 && !p.finished)
-        #expect(p.title == "shader split · reading")
-        #expect(p.percent == nil)
-        #expect(p.fraction == 2.0 / 9)
+/// build_ipa_from_nsp.py's `--progress json` lines, as json.dumps writes them (the event first, ", " and ": ").
+@Suite struct BuildOutputTests {
+    let t = 1_793_000_000.5
+
+    @Test func aStageItsStepsAndItsEnd() throws {
+        var reader = BuildOutputReader()
+        let clock = BuildOutputReader.clock(t)
+
+        #expect(
+            reader.read(
+                #"{"ev": "stage", "k": 4, "n": 6, "name": "shader split", "step": "checking the inputs", "t": \#(t)}"#
+            )
+                == ["\(clock)[4/6] shader split · checking the inputs …"])
+        var p = try #require(reader.progress)
+        #expect(p.stage == 4 && p.stages == 6 && !p.finished && p.percent == nil)
+        #expect(p.fraction == 3.0 / 6)
+
+        #expect(
+            reader.read(
+                #"{"ev": "step", "k": 4, "name": "shader split", "step": "splitting", "t": \#(t)}"#
+            ).count == 1)
+        #expect(
+            reader.read(
+                #"{"ev": "progress", "k": 4, "name": "shader split", "step": "splitting", "done": 211200, "total": 304243, "unit": "files", "est": false, "note": "", "frac": 0.69, "eta": 4.2, "elapsed": 37.0, "t": \#(t)}"#
+            ).isEmpty)  // the bar's job, not the log's
+        p = try #require(reader.progress)
+        #expect(p.percent == 69 && p.eta == 4.2)
+        #expect(p.summary == "4/6 shader split · splitting · 69% · 0:04 left")
+        #expect(abs(p.fraction - 3.69 / 6) < 1e-9)
+
+        #expect(
+            reader.read(
+                #"{"ev": "stage_end", "k": 4, "name": "shader split", "ok": true, "summary": "28669 shaders", "elapsed": 377.2, "t": \#(t)}"#
+            ) == ["\(clock)✓ [4/6] shader split (6:17): 28669 shaders"])
+        p = try #require(reader.progress)
+        #expect(p.finished && !p.isLastStageDone && p.fraction == 4.0 / 6)
     }
 
-    @Test func stageBeat() throws {
-        let p = try #require(
-            BuildProgress(
-                line:
-                    "[07:48:30] [3/9] shader split · reading: 45%, 1,203/19,592 shaders, 0:30 · ETA 1:00"
-            ))
-        #expect(p.title == "shader split · reading")
-        #expect(p.percent == 45)
+    @Test func aFailedStageAndTheLastOne() throws {
+        var reader = BuildOutputReader()
+        _ = reader.read(
+            #"{"ev": "stage", "k": 6, "n": 6, "name": "Mac host", "step": "", "t": \#(t)}"#)
+        #expect(
+            reader.read(
+                #"{"ev": "stage_end", "k": 6, "name": "Mac host", "ok": false, "summary": "", "elapsed": 3, "t": \#(t)}"#
+            )
+            .first?.hasSuffix("✗ [6/6] Mac host (0:03)") == true)
+        #expect(reader.progress?.finished == false)  // a failed stage isn't done
+        _ = reader.read(
+            #"{"ev": "stage", "k": 6, "n": 6, "name": "Mac host", "step": "", "t": \#(t)}"#)
+        _ = reader.read(
+            #"{"ev": "stage_end", "k": 6, "name": "Mac host", "ok": true, "summary": "", "elapsed": 3, "t": \#(t)}"#
+        )
+        #expect(reader.progress?.isLastStageDone == true && reader.progress?.fraction == 1)
     }
 
-    @Test func stageEnd() throws {
-        let p = try #require(
-            BuildProgress(line: "[07:49:00] ✓ [9/9] Mac host (1:02:03): /x/tools/dmhost"))
-        #expect(p.finished && p.isLastStageDone)
-        #expect(p.title == "Mac host")
-        #expect(p.fraction == 1)
-    }
-
-    @Test func otherLines() {
-        #expect(BuildProgress(line: "[07:48:00] building the IPA → /x.ipa") == nil)
-        #expect(BuildProgress(line: "Already up to date.") == nil)
+    @Test func messagesAndOtherLines() {
+        var reader = BuildOutputReader()
+        #expect(
+            reader.read(
+                #"{"ev": "say", "msg": "[13:57:00] [RED] 3 file(s) could not be read\nsecond line", "t": \#(t)}"#
+            )
+                == ["[13:57:00] [RED] 3 file(s) could not be read", "second line"])
+        #expect(
+            reader.read("nxnative updated: 1 new commit, rebuilding") == [
+                "nxnative updated: 1 new commit, rebuilding"
+            ])
+        #expect(
+            reader.read("Traceback (most recent call last):") == [
+                "Traceback (most recent call last):"
+            ])
+        #expect(reader.read(#"{"ev": "something new", "t": \#(t)}"#).isEmpty)  // a later event this build doesn't know
+        #expect(reader.read(#"{"ev": broken"#) == [#"{"ev": broken"#])
+        #expect(reader.progress == nil)
     }
 }
 

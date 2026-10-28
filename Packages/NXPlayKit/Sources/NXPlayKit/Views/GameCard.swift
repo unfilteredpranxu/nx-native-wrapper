@@ -154,9 +154,7 @@ struct JobProgress: View {
     }
 
     private func stageText(_ job: Job) -> String {
-        guard let progress = job.progress else { return "Starting…" }
-        let percent = progress.percent.map { " · \($0)%" } ?? ""
-        return "\(progress.stage)/\(progress.stages) \(progress.title)\(percent)"
+        job.progress?.summary ?? "Starting…"
     }
 }
 

@@ -108,7 +108,8 @@
             return job
         }
 
-        /// What `nxplay --rebuild` prints after a pull, in build_ipa_from_nsp.py's own format (--progress lines).
+        /// What `nxplay --rebuild` prints after a pull: its own lines, then build_ipa_from_nsp.py's `--progress json`
+        /// events, which the log shows as lines and the progress bar follows.
         private func buildLog(_ game: Game, finished: Bool) -> [String] {
             let titleID = game.titleID ?? "0100000000000000"
             let work = Self.tilde(game.buildFolder?.path ?? game.folder.path + "/\(titleID)_build")
@@ -119,34 +120,76 @@
             let yellow = "\u{1B}[33m"
             let dim = "\u{1B}[2m"
             let reset = "\u{1B}[m"
+            let start = Calendar.current.date(bySettingHour: 21, minute: 14, second: 0, of: .now)!
             func t(_ s: Int) -> String { String(format: "[21:14:%02d]", s) }
+            func event(_ s: Int, _ fields: [String: Any]) -> String {
+                var fields = fields
+                let kind = fields.removeValue(forKey: "ev")!
+                fields["t"] = start.timeIntervalSince1970 + Double(s)
+                let body = String(
+                    decoding: try! JSONSerialization.data(
+                        withJSONObject: fields, options: [.sortedKeys]),
+                    as: UTF8.self)
+                return #"{"ev": ""# + "\(kind)\", " + body.dropFirst()  // the event first, as the script writes it
+            }
+            func say(_ s: Int, _ msg: String) -> String {
+                event(s, ["ev": "say", "msg": "\(t(s)) \(msg)"])
+            }
+            func stage(_ s: Int, _ k: Int, _ name: String, _ step: String = "") -> String {
+                event(s, ["ev": "stage", "k": k, "n": 6, "name": name, "step": step])
+            }
+            func end(_ s: Int, _ k: Int, _ name: String, _ elapsed: Double, _ summary: String = "")
+                -> String
+            {
+                event(
+                    s,
+                    [
+                        "ev": "stage_end", "k": k, "name": name, "ok": true, "summary": summary,
+                        "elapsed": elapsed,
+                    ])
+            }
             var lines = [
                 "nxnative updated: 2 new commits, rebuilding",
                 "  \(yellow)4c1d2e9\(reset) Match verified game patches across compatible updates \(dim)(nxnative, 2 hours ago)\(reset)",
                 "  \(yellow)9b70f3a\(reset) Guard Metal image atomics and reject unsupported bindings \(dim)(nxnative, 3 hours ago)\(reset)",
-                "\(t(17)) game profile: \(titleID)",
-                "\(t(17)) Mac-only build for development: the Mac shaders and the Mac host, no iOS shaders, Xcode project or IPA",
-                "\(t(17)) work folder (extracted game files in extract/, kept for the next build): \(work)",
-                "\(t(18)) base: \(game.name) [\(titleID)][v0].nsp",
-                "\(t(18)) [1/6] build nx_extract …",
-                "\(t(18)) ✓ [1/6] build nx_extract (0:00)",
-                "\(t(18)) [2/6] extract \(version) …",
-                "\(t(18)) reusing the extracted \(version): \(work)/extract/\(version)",
-                "\(t(18)) ✓ [2/6] extract \(version) (0:00): reused",
-                "\(t(18)) game language: en-US (American English)",
-                "\(t(18)) [3/6] rewrite · checking the inputs …",
-                "\(t(21)) ✓ [3/6] rewrite (0:03): main, sdk",
-                "\(t(21)) [4/6] shader split · checking the inputs …",
-                "\(t(21)) ✓ [4/6] shader split (0:00): 46 shaders, reused (inputs unchanged)",
-                "\(t(21)) [5/6] Mac shaders · checking the inputs …",
-                "\(t(22)) ✓ [5/6] Mac shaders (0:01): 46 of 46 shaders ready, reused (inputs unchanged)",
-                "\(t(22)) [6/6] Mac host · building …",
-                "\(t(52)) [6/6] Mac host · building: 64%, 0:30 · ETA 0:17",
+                say(17, "game profile: \(titleID)"),
+                say(
+                    17,
+                    "Mac-only build for development: the Mac shaders and the Mac host, no iOS shaders, Xcode project or IPA"
+                ),
+                say(
+                    17,
+                    "work folder (extracted game files in extract/, kept for the next build): \(work)"
+                ),
+                say(18, "base: \(game.name) [\(titleID)][v0].nsp"),
+                stage(18, 1, "build nx_extract"), end(18, 1, "build nx_extract", 0.2),
+                stage(18, 2, "extract \(version)"),
+                say(18, "reusing the extracted \(version): \(work)/extract/\(version)"),
+                end(18, 2, "extract \(version)", 0.1, "reused"),
+                say(18, "game language: en-US (American English)"),
+                stage(18, 3, "rewrite", "checking the inputs"),
+                end(21, 3, "rewrite", 3, "main, sdk"),
+                stage(21, 4, "shader split", "checking the inputs"),
+                end(21, 4, "shader split", 0.3, "46 shaders, reused (inputs unchanged)"),
+                stage(21, 5, "Mac shaders", "checking the inputs"),
+                end(22, 5, "Mac shaders", 1, "46 of 46 shaders ready, reused (inputs unchanged)"),
+                stage(22, 6, "Mac host", "building"),
+                event(
+                    52,
+                    [
+                        "ev": "progress", "k": 6, "name": "Mac host", "step": "building",
+                        "done": 64, "total": 100,
+                        "unit": "", "est": false, "note": "", "frac": 0.64, "eta": 17,
+                        "elapsed": 30,
+                    ]),
             ]
             if finished {
                 lines += [
-                    "\(t(59)) ✓ [6/6] Mac host (0:37): \(work)/tools/dmhost",
-                    "\(t(59)) done: the game runs on the Mac with this command (its save in \(work)/run/save, kept from run to run):",
+                    end(59, 6, "Mac host", 37, "\(work)/tools/dmhost"),
+                    say(
+                        59,
+                        "done: the game runs on the Mac with this command (its save in \(work)/run/save, kept from run to run):"
+                    ),
                     "saved: \(work)/start_mac.sh",
                     "nxplay: done",
                 ]

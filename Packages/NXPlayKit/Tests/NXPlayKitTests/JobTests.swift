@@ -17,7 +17,9 @@ import Testing
         let job = try job(
             running: """
                 echo "args: $*"
-                echo "[11:00:00] [2/4] shader split · reading: 50%, 1/2 shaders" >&2
+                echo '{"ev": "stage", "k": 2, "n": 4, "name": "shader split", "step": "reading", "t": 1793000000}'
+                echo '{"ev": "progress", "k": 2, "name": "shader split", "step": "reading", "frac": 0.5, "eta": null, "t": 1793000000}'
+                echo "Traceback (most recent call last):" >&2
                 exit 3
                 """, arguments: ["--build-only", "/games/A"])
 
@@ -27,6 +29,10 @@ import Testing
         #expect(job.status == .failed(3))
         #expect(job.log.lines.map(\.text).contains("args: --build-only /games/A"))
         #expect(job.progress?.stage == 2 && job.progress?.percent == 50)
+        let shown = job.log.lines.map(\.text)
+        #expect(shown.contains { $0.hasSuffix("[2/4] shader split · reading …") })
+        #expect(!shown.contains { $0.hasPrefix("{") })  // events become lines, never raw JSON
+        #expect(shown.contains("Traceback (most recent call last):"))
         #expect(job.log.lines.last?.text == "nxplay: failed (exit 3)")
     }
 
@@ -60,7 +66,8 @@ import Testing
         try ("#!/bin/bash\n" + body + "\n").write(to: script, atomically: true, encoding: .utf8)
         let game = Game(
             folder: folder, name: "Test", titleID: nil, version: nil, languages: [], iconURL: nil,
-            buildFolder: nil, ipaURL: nil, xcodeBuildFolder: nil, hasPackages: true, state: .notExtracted)
+            buildFolder: nil, ipaURL: nil, xcodeBuildFolder: nil, hasPackages: true,
+            state: .notExtracted)
         return Job(
             kind: .extract, game: game,
             command: NXPlayCommand(

@@ -8,6 +8,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 - **Uninstall NX Play also removes NX Play from the Dock** when you'd kept it there, so no icon pointing at the Trash stays behind. The Dock restarts for a moment to pick up the change.
 
+### Changed
+
+- **Build progress comes from nxnative's front-end interface:** the build script's `--progress json` events ([docs/frontends.md](https://github.com/seedds/nxnative/blob/main/docs/frontends.md)). NX Play no longer reads the text it prints for people. The progress bar, the card and the Dock follow exact stage fractions, and now also show the time left in a stage. The log shows the same lines as before. In a terminal, `nxplay` still shows the build's bar.
+
 ## 1.7.2 — 2026-10-28
 
 ### Fixed

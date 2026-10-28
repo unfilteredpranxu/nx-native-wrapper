@@ -40,7 +40,7 @@ struct LogPanel: View {
                 {
                     ProgressView(value: progress.fraction)
                         .frame(width: 140)
-                    Text("\(progress.stage)/\(progress.stages) \(progress.title)")
+                    Text(progress.summary)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

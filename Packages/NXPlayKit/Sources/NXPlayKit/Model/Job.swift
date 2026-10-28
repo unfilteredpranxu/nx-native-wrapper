@@ -43,6 +43,7 @@ public final class Job: Identifiable {
     @ObservationIgnored private var outputClosed = false
     @ObservationIgnored private var cancelRequested = false
     @ObservationIgnored private var ansi = ANSIParser()
+    @ObservationIgnored private var output = BuildOutputReader()
     /// Seconds between the escalating stop signals.
     @ObservationIgnored var stopGrace: TimeInterval = 5
 
@@ -150,11 +151,9 @@ public final class Job: Identifiable {
 
     private func received(_ lines: [String], closed: Bool) {
         if !lines.isEmpty {
-            let parsed = lines.map { ansi.parse($0) }
-            log.append(parsed)
-            if let latest = parsed.lazy.map(\.text).compactMap(BuildProgress.init(line:)).last {
-                progress = latest
-            }
+            let shown = lines.flatMap { output.read($0) }
+            if !shown.isEmpty { log.append(shown.map { ansi.parse($0) }) }
+            if output.progress != progress { progress = output.progress }
         }
         if closed {
             outputClosed = true

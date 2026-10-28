@@ -45,6 +45,8 @@ public struct NXPlayCommand: Sendable {
         env["NXNATIVE"] = nxnative
         env["NX_KEYS"] = keys
         if let venv { env["NXPLAY_VENV"] = venv }
+        // the build's stages as JSON events (BuildOutputReader), not lines meant for a terminal
+        env["NXPLAY_PROGRESS"] = "json"
         env["PYTHONUNBUFFERED"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
         env["LANG"] = env["LANG"] ?? "en_US.UTF-8"
