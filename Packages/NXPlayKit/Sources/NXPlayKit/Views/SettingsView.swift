@@ -3,20 +3,46 @@ import SwiftUI
 /// The Settings window, one tab per subject: each tab is only as tall as its own settings, so the window fits a small
 /// screen (all of them on one page ran under the Dock on a laptop).
 public struct SettingsView: View {
+    @Environment(Library.self) private var library
+
     public init() {}
 
     public var body: some View {
-        TabView {
+        @Bindable var library = library
+        TabView(selection: $library.settingsTab) {
             GeneralSettings()
                 .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
             PlayingSettings()
                 .tabItem { Label("Playing", systemImage: "gamecontroller") }
+                .tag(SettingsTab.playing)
             SaveSettings()
                 .tabItem { Label("Saves", systemImage: "externaldrive") }
+                .tag(SettingsTab.saves)
             DeviceSettings()
                 .tabItem { Label("Devices", systemImage: "iphone") }
+                .tag(SettingsTab.devices)
             UpdatesTab()
                 .tabItem { Label("Updates", systemImage: "arrow.down.circle") }
+                .tag(SettingsTab.updates)
+        }
+    }
+}
+
+public enum SettingsTab: Hashable, Sendable { case general, playing, saves, devices, updates }
+
+/// NX Play › Check for Updates…: checks now and shows the result in Settings › Updates.
+public struct CheckForUpdatesMenuItem: View {
+    @Environment(Library.self) private var library
+    @Environment(\.openSettings) private var openSettings
+
+    public init() {}
+
+    public var body: some View {
+        Button("Check for Updates…") {
+            library.settingsTab = .updates
+            openSettings()
+            Task { await library.updater.check() }
         }
     }
 }

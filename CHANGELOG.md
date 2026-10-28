@@ -6,6 +6,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ### Added
 
+- **Check for Updates…** in the NX Play menu checks now and opens Settings › Updates to show the result.
+
 - **Uninstall NX Play…** (in the NX Play menu) removes everything NX Play put on the Mac: `~/Library/Application Support/NX Play` with what Setup installed, the settings, caches and saved window state. The app goes to the Trash. A checkbox also removes the Homebrew tools Setup installs; it's off by default, since other software may use them. Your games folder (with the games, their builds and their saves), `prod.keys`, the save backup repository and Homebrew stay. It lists each item with its size first, and waits until no game or build is running.
 
 ### Changed

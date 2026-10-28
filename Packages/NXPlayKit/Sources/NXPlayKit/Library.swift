@@ -91,6 +91,8 @@ public final class Library {
     public let gamepad = Gamepad()
     /// Updates from GitHub releases (a released app only).
     public let updater = AppUpdater()
+    /// The Settings tab shown; Check for Updates… opens Updates.
+    public var settingsTab = SettingsTab.general
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var queue: [Job] = []

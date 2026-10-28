@@ -11,6 +11,10 @@ struct NXPlayApp: App {
                 .library(library)
         }
         .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesMenuItem()
+                    .library(library)
+            }
             CommandGroup(after: .appSettings) {
                 SetupMenuItem()
             }
