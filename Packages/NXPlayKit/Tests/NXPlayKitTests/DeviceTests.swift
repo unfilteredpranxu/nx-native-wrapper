@@ -48,7 +48,9 @@ import Testing
     }
 
     @Test func readsXcodesTeams() throws {
-        let defaults = try #require(UserDefaults(suiteName: "nxplay-tests-\(UUID().uuidString)"))
+        let suite = testDefaultsName()
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { removeTestDefaults(suite) }
         defaults.set(
             [
                 "account-uuid": [

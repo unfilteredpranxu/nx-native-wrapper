@@ -3,10 +3,23 @@ import Testing
 
 @testable import NXPlayKit
 
-@MainActor @Suite struct LibraryTests {
+/// A class, so each test's settings domains are removed when it ends: a suite's plist otherwise stays in
+/// ~/Library/Preferences for good.
+@MainActor @Suite final class LibraryTests {
+    private var suites: [String] = []
+
+    deinit {
+        suites.forEach(removeTestDefaults)
+    }
+
+    private func defaults() -> UserDefaults {
+        let suite = testDefaultsName()
+        suites.append(suite)
+        return UserDefaults(suiteName: suite)!
+    }
+
     private func library() -> Library {
-        let suite = "nxplay-tests-\(UUID().uuidString)"
-        return Library(defaults: UserDefaults(suiteName: suite)!, isScreenshot: true)  // no devicectl
+        Library(defaults: defaults(), isScreenshot: true)  // no devicectl
     }
 
     private func job(_ name: String, _ status: Job.Status) -> Job {
@@ -212,8 +225,7 @@ import Testing
     }
 
     @Test func theLogStateIsRemembered() {
-        let suite = "nxplay-tests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
+        let defaults = defaults()
         let first = Library(defaults: defaults, isScreenshot: true)
         #expect(first.showsLog && first.logHeight == 240 && first.viewStyle == .grid)  // defaults
         first.showsLog = false
