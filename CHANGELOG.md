@@ -4,6 +4,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+### Fixed
+
+- **Uninstall NX Play no longer fails over Homebrew tools other software needs.** Removing the tools stopped the whole uninstall when Homebrew refused to remove one that other formulae depend on, such as zstd, which llvm, node and python use. Uninstall now removes only the tools nothing else needs, one at a time. It lists the others under Kept, with what needs them, and finishes even if one can't be removed.
+
 ## 1.7.1 — 2026-10-28
 
 ### Added

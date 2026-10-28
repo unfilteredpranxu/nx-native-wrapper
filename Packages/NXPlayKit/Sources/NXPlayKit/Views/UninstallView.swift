@@ -35,13 +35,13 @@ public struct UninstallView: View {
                             }
                         }
                     }
-                    if !uninstaller.tools.isEmpty {
+                    if !uninstaller.removableTools.isEmpty {
                         Divider()
                         Toggle(isOn: $uninstaller.removeTools) {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("Also remove the Homebrew tools Setup installs")
                                 Text(
-                                    "\(uninstaller.tools.joined(separator: ", ")). Leave this off if anything else uses them."
+                                    "\(uninstaller.removableTools.map(\.name).joined(separator: ", ")). Leave this off if you use them yourself."
                                 )
                                 .font(.caption).foregroundStyle(.secondary)
                             }
@@ -68,6 +68,9 @@ public struct UninstallView: View {
                         )
                     }
                     kept("Homebrew itself", nil)
+                    ForEach(uninstaller.tools.filter { !$0.neededBy.isEmpty }) { tool in
+                        kept("\(tool.name): \(Self.neededBy(tool.neededBy)) need it", nil)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(4)
@@ -109,6 +112,16 @@ public struct UninstallView: View {
     }
 
     @State private var logID = UUID()
+
+    /// "llvm and node", "llvm, node and 98 more".
+    static func neededBy(_ names: [String]) -> String {
+        switch names.count {
+        case 1: names[0]
+        case 2: "\(names[0]) and \(names[1])"
+        case 3: "\(names[0]), \(names[1]) and \(names[2])"
+        default: "\(names[0]), \(names[1]) and \(names.count - 2) more"
+        }
+    }
 
     private func icon(_ kind: Uninstaller.Item.Kind) -> String {
         switch kind {

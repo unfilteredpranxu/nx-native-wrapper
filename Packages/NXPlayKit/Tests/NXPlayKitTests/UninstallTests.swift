@@ -46,6 +46,21 @@ import Testing
         #expect(tools.map(\.cask) == [false, false, true])
     }
 
+    @Test func keepsOnlyNamesFromHomebrewsOutput() {
+        let output = """
+            Warning: Calling `postflight` is deprecated! Use `postflight_steps` instead.
+            Please report this issue to the stared/homebrew-doom tap (not Homebrew/* repositories):
+              /opt/homebrew/Library/Taps/stared/homebrew-doom/Casks/uzdoom.rb:14
+
+            llvm
+            llvm@22
+            python@3.14
+            """
+        #expect(Uninstaller.lines(output) == ["llvm", "llvm@22", "python@3.14"])
+        #expect(
+            UninstallView.neededBy(["llvm", "node", "mysql", "rust"]) == "llvm, node and 2 more")
+    }
+
     @Test func cleansUpOnceTheAppHasQuit() async throws {
         let appHome = try make("NX Play")
         let caches = try make("Caches/x")

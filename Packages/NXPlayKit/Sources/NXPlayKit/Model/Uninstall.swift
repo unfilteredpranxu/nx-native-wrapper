@@ -28,8 +28,18 @@ public final class Uninstaller {
     }
 
     public private(set) var items: [Item] = []
-    /// The Brewfile's tools that are installed now (Setup installs them; something else may have, too).
-    public private(set) var tools: [String] = []
+    /// A Brewfile tool that is installed now (Setup installs them; something else may have, too).
+    public struct Tool: Identifiable, Sendable {
+        public let name: String
+        public let cask: Bool
+        /// Installed formulae that depend on it: Homebrew refuses to remove it, so it's kept.
+        public let neededBy: [String]
+        public var id: String { name }
+    }
+
+    public private(set) var tools: [Tool] = []
+    /// The tools nothing else installed needs: the ones the checkbox removes.
+    public var removableTools: [Tool] { tools.filter(\.neededBy.isEmpty) }
     public var removeTools = false
     public private(set) var phase: Phase = .idle
     public private(set) var log = LogBuffer()
@@ -131,14 +141,30 @@ public final class Uninstaller {
         }
     }
 
-    nonisolated static func installedTools() -> [String] {
+    /// The Brewfile's tools installed now, each with the installed formulae that depend on it (zstd is a dependency of
+    /// llvm, node, python and many more: Homebrew won't remove it, and shouldn't).
+    nonisolated static func installedTools(
+        brewfile: URL? = AppHome.setupProject?.appending(path: "Brewfile")
+    ) -> [Tool] {
         guard let brew = brewPath else { return [] }
-        let installed = Set(
-            Self.run(brew, ["list", "-1", "--formula"]).output.split(separator: "\n").map(
-                String.init)
-                + Self.run(brew, ["list", "-1", "--cask"]).output.split(separator: "\n").map(
-                    String.init))
-        return brewfileTools().map(\.name).filter(installed.contains)
+        let list = { (kind: String) in
+            Set(lines(Self.run(brew, ["list", "-1", kind]).output))
+        }
+        let formulae = list("--formula")
+        let casks = list("--cask")
+        return brewfileTools(brewfile).compactMap { tool in
+            guard (tool.cask ? casks : formulae).contains(tool.name) else { return nil }
+            let users =
+                tool.cask ? [] : lines(Self.run(brew, ["uses", "--installed", tool.name]).output)
+            return Tool(name: tool.name, cask: tool.cask, neededBy: users)
+        }
+    }
+
+    /// A command's output lines that are names: Homebrew's warnings about other taps go to the same pipe.
+    nonisolated static func lines(_ output: String) -> [String] {
+        output.split(separator: "\n").map(String.init).filter {
+            !$0.isEmpty && !$0.contains(" ") && !$0.hasPrefix("/")
+        }
     }
 
     nonisolated static var brewPath: String? {
@@ -154,23 +180,19 @@ public final class Uninstaller {
         guard phase != .removingTools, phase != .finishing else { return }
         phase = .idle
         log = LogBuffer()
-        if removeTools, !tools.isEmpty, let brew = Self.brewPath {
+        // one by one, only the ones nothing else needs: one that still can't go is kept and noted, and the rest of
+        // the uninstall goes on (one brew command for all failed as a whole on a shared dependency)
+        if removeTools, let brew = Self.brewPath {
             phase = .removingTools
-            let casks = Set(Self.brewfileTools().filter(\.cask).map(\.name))
-            let formulae = tools.filter { !casks.contains($0) }
-            let caskList = tools.filter(casks.contains)
-            for (kind, names) in [("--formula", formulae), ("--cask", caskList)]
-            where !names.isEmpty {
-                log.append(["$ brew uninstall \(kind) \(names.joined(separator: " "))"])
+            for tool in removableTools {
+                let kind = tool.cask ? "--cask" : "--formula"
+                log.append(["$ brew uninstall \(kind) \(tool.name)"])
                 let result = await Task.detached {
-                    Self.run(brew, ["uninstall", kind] + names, environment: environment)
+                    Self.run(brew, ["uninstall", kind, tool.name], environment: environment)
                 }.value
                 log.append(result.output.split(separator: "\n").map(String.init))
                 if result.code != 0 {
-                    phase = .failed(
-                        "Homebrew couldn't remove every tool. NX Play is still installed; see the details."
-                    )
-                    return
+                    log.append(["\(tool.name) stays: Homebrew couldn't remove it"])
                 }
             }
         }
