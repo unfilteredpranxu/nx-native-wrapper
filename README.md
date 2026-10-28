@@ -95,7 +95,7 @@ Pick files one by one, a whole game, or a whole kind. Nothing is selected until 
 
 ![Free Up Space: game files, IPAs and Xcode builds per game, with their sizes](docs/free-up-space.webp)
 
-Settings has the nxnative folder, the keys file, the Metal compiler check, the game language, full screen and Apple's Metal performance HUD, the save backup repository, and the Apple team for device installs. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls. While builds run, the Dock icon shows their progress.
+Settings has a tab for each subject: **General** (the games folder, the keys file, the nxnative folder, the Metal compiler check, Setup), **Playing** (the game language, full screen, Apple's Metal performance HUD), **Saves** (the backup repository), **Devices** (the Apple team for device installs) and **Updates**. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls. While builds run, the Dock icon shows their progress.
 
 **On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen, with the games ready to play as a carousel of their artwork, the one you played last first, plus the clock and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
 

@@ -4,6 +4,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+### Changed
+
+- **Settings has tabs:** General, Playing, Saves, Devices and Updates. With everything on one page, the window was taller than a laptop screen, and Check Now ended up behind the Dock.
+
 ## 1.7 — 2026-10-28
 
 ### Added
