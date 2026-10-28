@@ -4,6 +4,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+### Changed
+
+- **The build's counts are back:** the progress text shows them, such as "4/6 shader split · splitting · 211,200/304,243 files · 69% · 0:04 left". The log again gets a line with the count every 30 seconds while a long stage runs, as before the switch to JSON progress. Each field of the build script's events is checked, so a field a later nxnative drops or changes only leaves that part out.
+
 ## 1.7.5 — 2026-10-28
 
 ### Added

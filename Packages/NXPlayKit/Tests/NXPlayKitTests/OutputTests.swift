@@ -60,7 +60,8 @@ import Testing
             ).isEmpty)  // the bar's job, not the log's
         p = try #require(reader.progress)
         #expect(p.percent == 69 && p.eta == 4.2)
-        #expect(p.summary == "4/6 shader split · splitting · 69% · 0:04 left")
+        #expect(
+            p.summary == "4/6 shader split · splitting · 211,200/304,243 files · 69% · 0:04 left")
         #expect(abs(p.fraction - 3.69 / 6) < 1e-9)
 
         #expect(
@@ -87,6 +88,79 @@ import Testing
             #"{"ev": "stage_end", "k": 6, "name": "Mac host", "ok": true, "summary": "", "elapsed": 3, "t": \#(t)}"#
         )
         #expect(reader.progress?.isLastStageDone == true && reader.progress?.fraction == 1)
+    }
+
+    @Test func countsAsTheScriptWordsThem() {
+        #expect(
+            BuildOutputReader.count(done: 1203, total: 19592, unit: "shaders", estimate: false)
+                == "1,203/19,592 shaders")
+        #expect(
+            BuildOutputReader.count(done: 2301, total: nil, unit: "files", estimate: false)
+                == "2,301 files")
+        #expect(BuildOutputReader.count(done: 3, total: 9, unit: "", estimate: false) == "3/9")
+        #expect(
+            BuildOutputReader.count(
+                done: 2_040_109_465, total: 5_368_709_120, unit: "B", estimate: true)
+                == "1.9/~5.0 GB")
+        #expect(
+            BuildOutputReader.count(done: 524_288, total: nil, unit: "B", estimate: false)
+                == "512.0 KB")
+        #expect(
+            BuildOutputReader.count(done: nil, total: 100, unit: "files", estimate: false) == nil)
+    }
+
+    @Test func aBeatLineEvery30SecondsWhileTheCountMoves() {
+        var reader = BuildOutputReader()
+        _ = reader.read(
+            #"{"ev": "stage", "k": 4, "n": 6, "name": "shader split", "step": "splitting", "t": \#(t)}"#
+        )
+        func progress(_ s: Double, _ done: Int) -> [String] {
+            reader.read(
+                #"{"ev": "progress", "k": 4, "name": "shader split", "step": "splitting", "done": \#(done), "total": 1000, "unit": "files", "est": false, "note": "", "frac": \#(Double(done) / 1000), "eta": 60, "elapsed": \#(s), "t": \#(t + s)}"#
+            )
+        }
+        #expect(progress(1, 10).isEmpty)  // the step's first count starts the clock
+        #expect(progress(20, 300).isEmpty)  // too soon
+        #expect(
+            progress(31, 500) == [
+                "\(BuildOutputReader.clock(t + 31))[4/6] shader split · splitting: 50%, 500/1,000 files, 0:31 · ETA 1:00"
+            ])
+        #expect(progress(45, 600).isEmpty)
+        #expect(progress(62, 500).count == 0)  // the same as the last line: nothing moved
+        #expect(progress(70, 900).count == 1)
+    }
+
+    /// A later nxnative may drop a field, rename one or change its type: the reader shows less, never garbage, and
+    /// doesn't crash.
+    @Test func oddOrMissingFieldsShowLessNotGarbage() throws {
+        var reader = BuildOutputReader()
+        _ = reader.read(
+            #"{"ev": "stage", "k": "four", "n": -6, "name": 42, "step": null, "t": "now"}"#)
+        #expect(reader.progress == nil)  // no usable stage number: nothing to show yet
+        _ = reader.read(
+            #"{"ev": "stage", "k": 2, "n": 3, "name": "Mac shaders\ncompiling", "step": ""}"#)
+        var p = try #require(reader.progress)
+        #expect(p.name == "Mac shaders compiling")  // a line break in a name doesn't break the line
+
+        let shown = reader.read(
+            #"{"ev": "progress", "k": 2, "done": "many", "total": -5, "unit": 7, "est": "yes", "note": ["x"], "frac": 5, "eta": -3, "elapsed": 1e30, "t": 1e40}"#
+        )
+        #expect(shown.isEmpty)
+        p = try #require(reader.progress)
+        #expect(p.count == nil && p.note == nil && p.stageFraction == nil && p.eta == nil)
+        #expect(p.summary == "2/3 Mac shaders compiling")
+
+        _ = reader.read(#"{"ev": "progress", "k": 2, "done": true, "total": 10, "frac": true}"#)
+        #expect(reader.progress?.count == nil && reader.progress?.stageFraction == nil)  // a Bool isn't a number
+
+        _ = reader.read(
+            #"{"ev": "progress", "k": 2, "done": 5, "total": 10, "note": "\#(String(repeating: "x", count: 500))"}"#
+        )
+        #expect(reader.progress?.note?.count == 120)  // a runaway note is cut
+        #expect(reader.read(#"{"ev": "say", "msg": 12}"#).isEmpty)
+        #expect(
+            reader.read(#"{"ev": "stage_end"}"#).first?.contains("✓ [2/3] Mac shaders compiling")
+                == true)
     }
 
     @Test func messagesAndOtherLines() {

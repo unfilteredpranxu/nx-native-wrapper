@@ -12,6 +12,10 @@ public struct BuildProgress: Equatable, Sendable {
     public let stageFraction: Double?
     /// Seconds left in the stage, while the script can tell.
     public let eta: Double?
+    /// The step's count as the script words it: "211,200/304,243 files", "1.9/~5.0 GB"; nil without one.
+    public var count: String? = nil
+    /// The script's note after the count, nil without one.
+    public var note: String? = nil
     public let finished: Bool
 
     public var title: String { step.isEmpty ? name : "\(name) · \(step)" }
@@ -25,11 +29,15 @@ public struct BuildProgress: Equatable, Sendable {
 
     public var isLastStageDone: Bool { finished && stage == stages }
 
-    /// "4/6 shader split · splitting · 45% · 0:04 left"
+    /// "4/6 shader split · splitting · 211,200/304,243 files · 69% · 0:04 left"
     public var summary: String {
         var parts = ["\(stage)/\(stages) \(title)"]
-        if !finished, let percent { parts.append("\(percent)%") }
-        if !finished, let eta { parts.append("\(Self.duration(eta)) left") }
+        if !finished {
+            if let count { parts.append(count) }
+            if let note { parts.append(note) }
+            if let percent { parts.append("\(percent)%") }
+            if let eta { parts.append("\(Self.duration(eta)) left") }
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -43,13 +51,22 @@ public struct BuildProgress: Equatable, Sendable {
 }
 
 /// Reads nxplay's output line by line: the build script's JSON events become the progress and log lines as its
-/// `--progress lines` mode would print them (a stage's start and end, its steps, its messages); anything else (nxplay's
-/// own lines, git's, a traceback on stderr) is shown as it is.
+/// `--progress lines` mode would print them (a stage's start and end, its steps, its messages, and every 30 s a line
+/// with the count while it moves); anything else (nxplay's own lines, git's, a traceback on stderr) is shown as it is.
+///
+/// The events are another project's output: every field is read on its own, checked for its type and range, and
+/// left out when missing or odd (a later version may drop or change one), so a change shows less, never garbage.
 struct BuildOutputReader {
     private(set) var progress: BuildProgress?
     private var stage = 0, stages = 0
     private var name = "", step = ""
     private var stageFraction: Double?, eta: Double?
+    private var count: String?, note: String?
+    /// When the last count line went to the log, and what it said.
+    private var lastBeat: Double?, lastBeatText: String?
+
+    /// lines mode's BEAT: a count line at most this often.
+    static let beatInterval = 30.0
 
     /// The log lines a line of output shows; updates `progress` from an event.
     mutating func read(_ line: String) -> [String] {
@@ -57,46 +74,48 @@ struct BuildOutputReader {
             let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let kind = event["ev"] as? String
         else { return [line] }
-        let clock = (event["t"] as? Double).map(Self.clock) ?? ""
-        let k = event["k"] as? Int ?? stage
+        let time = Self.number(event["t"], max: 1e11)
+        let clock = time.map(Self.clock) ?? ""
+        let k = Self.integer(event["k"]) ?? stage
         switch kind {
         case "stage":
             stage = k
-            stages = event["n"] as? Int ?? stages
-            name = event["name"] as? String ?? ""
-            step = event["step"] as? String ?? ""
-            stageFraction = nil
-            eta = nil
+            stages = Self.integer(event["n"]) ?? stages
+            name = Self.text(event["name"]) ?? ""
+            step = Self.text(event["step"]) ?? ""
+            restartStep()
             publish(finished: false)
             return ["\(clock)[\(stage)/\(stages)] \(title) …"]
         case "step":
-            step = event["step"] as? String ?? ""
-            stageFraction = nil
-            eta = nil
+            step = Self.text(event["step"]) ?? ""
+            restartStep()
             publish(finished: false)
             return ["\(clock)[\(stage)/\(stages)] \(title) …"]
         case "progress":
-            step = event["step"] as? String ?? step
-            stageFraction = event["frac"] as? Double
-            eta = event["eta"] as? Double
+            step = Self.text(event["step"]) ?? step
+            stageFraction = Self.number(event["frac"], max: 1)
+            eta = Self.number(event["eta"], max: 1e7)
+            count = Self.count(
+                done: Self.number(event["done"], max: 1e18),
+                total: Self.number(event["total"], max: 1e18),
+                unit: Self.text(event["unit"]) ?? "", estimate: event["est"] as? Bool ?? false)
+            note = Self.text(event["note"]).flatMap { $0.isEmpty ? nil : $0 }
             publish(finished: false)
-            return []
+            return beat(at: time, clock: clock, elapsed: Self.number(event["elapsed"], max: 1e7))
         case "stage_end":
             let ok = event["ok"] as? Bool ?? true
             let elapsed =
-                (event["elapsed"] as? Double).map { " (\(BuildProgress.duration($0)))" } ?? ""
-            let summary =
-                (event["summary"] as? String).flatMap { $0.isEmpty ? nil : ": \($0)" } ?? ""
-            let ended = event["name"] as? String ?? name
+                Self.number(event["elapsed"], max: 1e7).map { " (\(BuildProgress.duration($0)))" }
+                ?? ""
+            let summary = Self.text(event["summary"]).flatMap { $0.isEmpty ? nil : ": \($0)" } ?? ""
+            let ended = Self.text(event["name"]) ?? name
             step = ""
-            eta = nil
+            restartStep()
             publish(finished: ok)
             return ["\(clock)\(ok ? "✓" : "✗") [\(k)/\(stages)] \(ended)\(elapsed)\(summary)"]
         case "say":
-            return (event["msg"] as? String ?? "").split(
-                separator: "\n", omittingEmptySubsequences: false
-            )
-            .map(String.init)
+            guard let message = event["msg"] as? String else { return [] }
+            return message.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         default:
             return []  // an event this version doesn't know: the log stays readable without it
         }
@@ -104,11 +123,103 @@ struct BuildOutputReader {
 
     private var title: String { step.isEmpty ? name : "\(name) · \(step)" }
 
+    /// A new step starts with no count and its own beat.
+    private mutating func restartStep() {
+        stageFraction = nil
+        eta = nil
+        count = nil
+        note = nil
+        lastBeat = nil
+        lastBeatText = nil
+    }
+
     private mutating func publish(finished: Bool) {
         guard stage > 0 else { return }
         progress = BuildProgress(
             stage: stage, stages: max(stages, stage), name: name, step: step,
-            stageFraction: stageFraction, eta: eta, finished: finished)
+            stageFraction: stageFraction, eta: eta, count: count, note: note, finished: finished)
+    }
+
+    /// lines mode's beat: "[13:58:13] [3/6] rewrite · main: 67%, 2/3 modules, 0:36 · ETA 0:04", every 30 s while the
+    /// count or the share moves (the first one 30 s into the step). Nothing without a time to go by.
+    private mutating func beat(at time: Double?, clock: String, elapsed: Double?) -> [String] {
+        guard let time else { return [] }
+        guard let last = lastBeat else {
+            lastBeat = time
+            return []
+        }
+        guard time - last >= Self.beatInterval else { return [] }
+        var parts: [String] = []
+        if let percent = stageFraction.map({ Int(($0 * 100).rounded()) }) {
+            parts.append("\(percent)%")
+        }
+        if let count { parts.append(count) }
+        if let note { parts.append(note) }
+        let state = parts.joined(separator: ", ")
+        guard !state.isEmpty, state != lastBeatText else { return [] }  // nothing moved: no line
+        lastBeat = time
+        lastBeatText = state
+        if let elapsed {
+            parts.append(
+                BuildProgress.duration(elapsed)
+                    + (eta.map { " · ETA \(BuildProgress.duration($0))" } ?? ""))
+        }
+        return ["\(clock)[\(stage)/\(stages)] \(title): \(parts.joined(separator: ", "))"]
+    }
+
+    // MARK: - Checked fields
+
+    /// A number from 0 to max (JSON gives Int or Double); nil for anything else.
+    static func number(_ value: Any?, max: Double) -> Double? {
+        guard let value, !(value is Bool), let number = (value as? NSNumber)?.doubleValue,
+            number.isFinite, number >= 0, number <= max
+        else { return nil }
+        return number
+    }
+
+    static func integer(_ value: Any?) -> Int? {
+        number(value, max: 10_000).flatMap { $0 == $0.rounded() ? Int($0) : nil }
+    }
+
+    /// Text for one line: no line breaks or control characters, at most 120 characters.
+    static func text(_ value: Any?) -> String? {
+        guard let text = value as? String else { return nil }
+        let line = String(
+            text.unicodeScalars.map {
+                CharacterSet.controlCharacters.contains($0) ? " " : Character($0)
+            }
+        )
+        .trimmingCharacters(in: .whitespaces)
+        return line.count > 120 ? String(line.prefix(119)) + "…" : line
+    }
+
+    /// The count as build_ipa_from_nsp.py words it (_count): "1,203/19,592 shaders", "1.9/~5.0 GB", "2,301 files"
+    /// without a total; nil without a count.
+    static func count(done: Double?, total: Double?, unit: String, estimate: Bool) -> String? {
+        guard let done else { return nil }
+        let tilde = estimate ? "~" : ""
+        if unit == "B" {
+            let scale = byteScale(total ?? done)
+            let doneText = String(format: "%.1f", done / scale.divisor)
+            guard let total, total > 0 else { return "\(doneText) \(scale.unit)" }
+            return
+                "\(doneText)/\(tilde)\(String(format: "%.1f", total / scale.divisor)) \(scale.unit)"
+        }
+        let suffix = unit.isEmpty ? "" : " \(unit)"
+        guard let total, total > 0 else { return grouped(done) + suffix }
+        return "\(grouped(done))/\(tilde)\(grouped(total))\(suffix)"
+    }
+
+    private static func grouped(_ value: Double) -> String {
+        Int(value.rounded()).formatted(
+            .number.grouping(.automatic).locale(Locale(identifier: "en_US")))
+    }
+
+    /// The script's size_unit: GB, MB, else KB, in powers of 1024.
+    private static func byteScale(_ bytes: Double) -> (unit: String, divisor: Double) {
+        if bytes >= 1_073_741_824 { return ("GB", 1_073_741_824) }
+        if bytes >= 1_048_576 { return ("MB", 1_048_576) }
+        return ("KB", 1024)
     }
 
     /// "[21:14:52] ", as the script's own lines start.
