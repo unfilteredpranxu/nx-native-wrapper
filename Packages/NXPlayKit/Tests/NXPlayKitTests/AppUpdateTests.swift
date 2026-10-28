@@ -133,8 +133,12 @@ import Testing
             try await Task.sleep(for: .milliseconds(100))
         }
         #expect(try String(contentsOf: bundle.appending(path: "version"), encoding: .utf8) == "new")
-        let left = try FileManager.default.contentsOfDirectory(
-            atPath: bundle.deletingLastPathComponent().path)
-        #expect(left == ["NX Play.app"])  // the old one is gone
+        // the shell removes the old copy after moving the new one in: wait for that too
+        let folder = bundle.deletingLastPathComponent().path
+        for _ in 0..<50
+        where (try? FileManager.default.contentsOfDirectory(atPath: folder))?.count != 1 {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: folder) == ["NX Play.app"])  // the old one is gone
     }
 }
