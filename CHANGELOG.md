@@ -4,6 +4,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+## 1.7.1 — 2026-10-28
+
 ### Added
 
 - **Check for Updates…** in the NX Play menu checks now and opens Settings › Updates to show the result.
