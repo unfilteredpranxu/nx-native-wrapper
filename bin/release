@@ -36,9 +36,11 @@ xcrun notarytool history --keychain-profile "$profile" > /dev/null 2>&1 \
   || die "no notarytool profile '$profile': xcrun notarytool store-credentials $profile --apple-id <Apple ID> --team-id $team"
 echo "  version $version, signed by $identity, notarized with profile $profile"
 
-# from here on, a failure puts project.yml and CHANGELOG.md back
+# from here on, any exit before publishing (a failed step, die, Ctrl-C) puts project.yml and CHANGELOG.md back
 restore() { git checkout -q -- project.yml CHANGELOG.md; }
-trap 'restore; echo "bin/release: stopped; project.yml and CHANGELOG.md restored" >&2' ERR INT
+finished=0
+trap 'if (( !finished )); then restore; echo "bin/release: stopped; project.yml and CHANGELOG.md restored" >&2; fi' EXIT
+trap 'exit 130' INT
 
 say "Version"
 build_number=$(( $(sed -n 's/^ *CURRENT_PROJECT_VERSION: "\([0-9]*\)"/\1/p' project.yml) + 1 ))
@@ -91,15 +93,16 @@ spctl --assess --type execute "$app"
 shasum -a 256 "$dmg" | tee "$dmg.sha256"
 echo "  $dmg ($(du -h "$dmg" | cut -f1))"
 
-trap - ERR INT
 say "Publish"
 echo "$notes" | sed 's/^/  /'
 read -r -p $'\nCommit, tag and publish NX Play '"$version"$' to GitHub? [y/N] ' answer
 if [[ "$answer" != [yY] ]]; then
   restore
+  finished=1
   echo "not published; project.yml and CHANGELOG.md restored, the DMG stays in $out"
   exit 0
 fi
+finished=1
 git add project.yml CHANGELOG.md
 git commit -q -m "Release $version [skip ci]"
 git tag -a "v$version" -m "NX Play $version"
