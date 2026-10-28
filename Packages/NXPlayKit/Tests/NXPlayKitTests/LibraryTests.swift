@@ -227,12 +227,19 @@ import Testing
     @Test func theLogStateIsRemembered() {
         let defaults = defaults()
         let first = Library(defaults: defaults, isScreenshot: true)
-        #expect(first.showsLog && first.logHeight == 240 && first.viewStyle == .grid)  // defaults
+        #expect(!first.showsLog && first.logHeight == 240 && first.viewStyle == .grid)  // defaults
+        first.showsLog = true
         first.showsLog = false
         first.logHeight = 333
         first.viewStyle = .list
 
         let next = Library(defaults: defaults, isScreenshot: true)
         #expect(!next.showsLog && next.logHeight == 333 && next.viewStyle == .list)
+    }
+
+    @Test func theLogStaysShownForSomeoneWhoAlreadyHadIt() {
+        let defaults = defaults()
+        defaults.set("/games", forKey: Library.Keys.root)  // chose a folder before the default changed
+        #expect(Library(defaults: defaults, isScreenshot: true).showsLog)
     }
 }

@@ -10,6 +10,12 @@ struct GameCard: View {
         VStack(alignment: .leading, spacing: 8) {
             GameIcon(url: game.iconURL)
                 .overlay(alignment: .topTrailing) { IconBadges(game: game).padding(6) }
+                // on the artwork, so a build doesn't make the card taller
+                .overlay(alignment: .bottom) {
+                    if let job, job.showsProgress {
+                        IconProgressBar(fraction: job.progressFraction)
+                    }
+                }
             VStack(alignment: .leading, spacing: 2) {
                 Text(game.name)
                     .font(.headline)
@@ -34,7 +40,7 @@ struct GameCard: View {
         .onTapGesture(count: 2) { library.primaryAction(for: game) }
         .simultaneousGesture(TapGesture().onEnded { library.selection = game.id })
         .contextMenu { GameActions(game: game) }
-        .help(game.folder.path)
+        .help(job.flatMap { $0.showsProgress ? $0.progressText : nil } ?? game.folder.path)
     }
 
     private var subtitle: String {
@@ -49,15 +55,12 @@ private struct GameStatus: View {
     let job: Job?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                GameBadge(game: game, job: job)
-                Spacer(minLength: 4)
-                GameActionButton(game: game, job: job)
-            }
-            .controlSize(.small)
-            JobProgress(job: job)
+        HStack(spacing: 6) {
+            GameBadge(game: game, job: job)
+            Spacer(minLength: 4)
+            GameActionButton(game: game, job: job)
         }
+        .controlSize(.small)
     }
 }
 
@@ -66,18 +69,26 @@ struct GameBadge: View {
     let game: Game
     let job: Job?
 
+    /// " · 64%", the whole build's, while one runs: the card's bar has no text of its own.
+    private var percent: String {
+        guard let job, job.status == .running, job.showsProgress, job.progress != nil else {
+            return ""
+        }
+        return " · \(Int((job.progressFraction * 100).rounded()))%"
+    }
+
     var body: some View {
         switch (job?.status, job?.kind) {
         case (.running?, .play?):
-            Badge(text: job?.isBuilding == true ? "Building" : "Running", color: .green)
+            Badge(text: job?.isBuilding == true ? "Building\(percent)" : "Running", color: .green)
         case (.running?, .ipa?):
-            Badge(text: "Building IPA", color: .blue)
+            Badge(text: "Building IPA\(percent)", color: .blue)
         case (.running?, .macApp?):
-            Badge(text: "Making App", color: .blue)
+            Badge(text: "Making App\(percent)", color: .blue)
         case (.running?, .install?):
-            Badge(text: "Installing", color: .blue)
+            Badge(text: "Installing\(percent)", color: .blue)
         case (.running?, _):
-            Badge(text: "Extracting", color: .blue)
+            Badge(text: "Extracting\(percent)", color: .blue)
         case (.queued?, _):
             Badge(text: "Queued", color: .secondary)
         case (.failed?, _):
@@ -136,25 +147,44 @@ struct GameActionButton: View {
     }
 }
 
-/// A build's progress and stage, while one runs.
+/// A build's progress and stage, while one runs (Console Mode, under the title).
 struct JobProgress: View {
     let job: Job?
 
     var body: some View {
-        if let job, job.status.isActive, job.kind != .play || job.isBuilding {
+        if let job, job.showsProgress {
             VStack(alignment: .leading, spacing: 2) {
-                ProgressView(value: job.status == .queued ? 0 : job.progress?.fraction ?? 0)
+                ProgressView(value: job.progressFraction)
                     .controlSize(.small)
-                Text(job.status == .queued ? "Waiting for the current build" : stageText(job))
+                Text(job.progressText)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
         }
     }
+}
 
-    private func stageText(_ job: Job) -> String {
-        job.progress?.summary ?? "Starting…"
+/// A thin bar along the bottom of a game's artwork, inside its rounded corners, on a dark track that reads over any art.
+struct IconProgressBar: View {
+    let fraction: Double
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.black.opacity(0.55))
+                Capsule().fill(Color.accentColor)
+                    .frame(width: max(6, geometry.size.width * min(max(fraction, 0), 1)))
+                    .animation(.easeOut(duration: 0.3), value: fraction)
+            }
+        }
+        .frame(height: 6)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 10)
+        .shadow(color: .black.opacity(0.4), radius: 2)
+        .accessibilityElement()
+        .accessibilityLabel("Build progress")
+        .accessibilityValue("\(Int((fraction * 100).rounded())) percent")
     }
 }
 

@@ -136,7 +136,11 @@ public final class Library {
         allowOtherMetal = defaults.bool(forKey: Keys.allowOtherMetal)
         language = defaults.string(forKey: Keys.language) ?? ""
         teamID = defaults.string(forKey: Keys.team) ?? ""
-        showsLog = defaults.object(forKey: Keys.showsLog) as? Bool ?? true
+        // hidden for a new player (the status bar shows builds; a failure opens it); someone who chose a games folder
+        // before this default changed keeps the log they had
+        showsLog =
+            defaults.object(forKey: Keys.showsLog) as? Bool
+            ?? (defaults.string(forKey: Keys.root) != nil)
         logHeight = defaults.object(forKey: Keys.logHeight) as? Double ?? 240
         viewStyle =
             defaults.string(forKey: Keys.viewStyle).flatMap(ViewStyle.init(rawValue:)) ?? .grid
@@ -243,6 +247,22 @@ public final class Library {
     }
 
     public func job(for game: Game) -> Job? { jobs[game.id] }
+
+    /// The builds to show progress for (Job.showsProgress), the running ones first, then by game.
+    public var buildingJobs: [Job] {
+        jobs.values.filter(\.showsProgress).sorted {
+            ($0.status == .running ? 0 : 1, $0.game.name) < (
+                $1.status == .running ? 0 : 1, $1.game.name
+            )
+        }
+    }
+
+    /// 0…1 across the builds (their average), nil when none runs: the Dock's and the status bar's.
+    public var buildFraction: Double? {
+        let building = buildingJobs
+        guard !building.isEmpty else { return nil }
+        return building.reduce(0) { $0 + $1.progressFraction } / Double(building.count)
+    }
 
     public func isBusy(_ game: Game) -> Bool { jobs[game.id]?.status.isActive == true }
 

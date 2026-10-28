@@ -38,9 +38,15 @@ struct GameList: View {
                 .width(min: 130, ideal: 150)
                 TableColumn("Status", value: \.statusRank) { row in
                     let job = library.job(for: row.game)
-                    VStack(alignment: .leading, spacing: 3) {
+                    // the bar beside the badge, so a row stays one line tall while a build runs
+                    HStack(spacing: 8) {
                         GameBadge(game: row.game, job: job)
-                        JobProgress(job: job)
+                        if let job, job.showsProgress {
+                            ProgressView(value: job.progressFraction)
+                                .controlSize(.small)
+                                .frame(minWidth: 40, maxWidth: 90)
+                                .help(job.progressText)
+                        }
                     }
                     .padding(.vertical, 2)
                 }

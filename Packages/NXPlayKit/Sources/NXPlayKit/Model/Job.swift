@@ -58,6 +58,20 @@ public final class Job: Identifiable {
         status == .running && progress.map { !$0.isLastStageDone } == true
     }
 
+    /// Build work to show progress for: an extraction, rebuild, IPA, app or install, queued or running, or a play
+    /// while it builds (not the game itself).
+    public var showsProgress: Bool {
+        status.isActive && (kind != .play || status == .queued || isBuilding)
+    }
+
+    /// The whole build done so far, 0 while it waits its turn.
+    public var progressFraction: Double { status == .queued ? 0 : progress?.fraction ?? 0 }
+
+    /// "4/6 shader split · splitting · 69% · 0:04 left"
+    public var progressText: String {
+        status == .queued ? "Waiting for the current build" : progress?.summary ?? "Starting…"
+    }
+
     /// A line from NX Play itself in the run's log (the save backup's).
     func note(_ line: String) {
         log.append([line])

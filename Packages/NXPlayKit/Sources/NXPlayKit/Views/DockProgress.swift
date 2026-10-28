@@ -15,14 +15,7 @@ struct DockProgress: View {
 
     /// 0…1 across the running builds, in whole percents (fewer Dock redraws); nil when none runs.
     private var fraction: Double? {
-        let building = library.jobs.values.filter { job in
-            job.status.isActive && (job.kind != .play || job.status == .queued || job.isBuilding)
-        }
-        guard !building.isEmpty else { return nil }
-        let total = building.reduce(0.0) { sum, job in
-            sum + (job.status == .queued ? 0 : job.progress?.fraction ?? 0)
-        }
-        return (total / Double(building.count) * 100).rounded() / 100
+        library.buildFraction.map { ($0 * 100).rounded() / 100 }
     }
 }
 

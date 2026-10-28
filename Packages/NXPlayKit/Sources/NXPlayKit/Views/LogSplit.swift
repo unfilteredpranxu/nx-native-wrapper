@@ -28,6 +28,11 @@ struct LogSplit: View {
                     LogPanel()
                         .frame(height: height)
                         .transition(.move(edge: .bottom))
+                } else if !library.buildingJobs.isEmpty {
+                    // the log header's progress, while the log is hidden
+                    Divider()
+                    BuildStatusBar(jobs: library.buildingJobs)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
         }

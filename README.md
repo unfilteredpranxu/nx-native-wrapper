@@ -69,7 +69,7 @@ Switch/
     └── ….nsz
 ```
 
-Extracted games show their icons and a **Play** button; the others have **Extract**, and **Extract All** builds them one after another. The panel at the bottom shows the selected game's output. The toolbar switches between the grid and a sortable list (View › as Grid ⌘1 / as List ⌘2).
+Extracted games show their icons and a **Play** button; the others have **Extract**, and **Extract All** builds them one after another. A status bar at the bottom shows what's building. The log, which starts hidden (View › Show Log, ⇧⌘Y), shows the selected game's output, and opens by itself when a build fails. The toolbar switches between the grid and a sortable list (View › as Grid ⌘1 / as List ⌘2).
 
 ![The library as a list, with each game's version, title ID and status](docs/list.webp)
 

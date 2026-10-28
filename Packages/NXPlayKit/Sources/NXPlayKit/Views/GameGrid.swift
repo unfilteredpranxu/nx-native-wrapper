@@ -5,7 +5,7 @@ struct GameGrid: View {
     @Environment(Library.self) private var library
 
     private let columns = [
-        GridItem(.adaptive(minimum: 168, maximum: 220), spacing: 16, alignment: .top)
+        GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 16, alignment: .top)
     ]
 
     var body: some View {
