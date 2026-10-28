@@ -263,47 +263,6 @@ private struct Hints: View {
     }
 }
 
-/// Puts the window into full screen for Console Mode and back out when it ends; leaving full screen any other
-/// way (the green button, ⌃⌘F) ends Console Mode.
-struct ConsoleWindowController: NSViewRepresentable {
-    let consoleMode: Bool
-    let exit: () -> Void
-
-    @MainActor final class Coordinator {
-        var enteredFullScreen = false
-        var observer: (any NSObjectProtocol)?
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeNSView(context: Context) -> NSView { NSView() }
-
-    func updateNSView(_ view: NSView, context: Context) {
-        let state = context.coordinator
-        DispatchQueue.main.async {
-            guard let window = view.window else { return }
-            if state.observer == nil {
-                state.observer = NotificationCenter.default.addObserver(
-                    forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main
-                ) { _ in
-                    MainActor.assumeIsolated {
-                        state.enteredFullScreen = false
-                        exit()
-                    }
-                }
-            }
-            let isFull = window.styleMask.contains(.fullScreen)
-            if consoleMode, !isFull {
-                state.enteredFullScreen = true
-                window.toggleFullScreen(nil)
-            } else if !consoleMode, isFull, state.enteredFullScreen {
-                state.enteredFullScreen = false
-                window.toggleFullScreen(nil)
-            }
-        }
-    }
-}
-
 /// The toolbar button.
 struct ConsoleToggle: View {
     @Environment(Library.self) private var library

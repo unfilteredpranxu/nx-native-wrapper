@@ -6,6 +6,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ### Changed
 
+- **A game started from Console Mode returns to Console Mode when it quits,** whether with ⌘Q or a crash. Before, macOS brought forward the app you'd used last on the desktop. Console Mode now covers the screen on the desktop, with the menu bar and Dock hidden, instead of opening a full-screen Space of its own. A game that quits hands the screen back to the desktop, where Console Mode is now waiting.
+
 - **The build's counts are back:** the progress text shows them, such as "4/6 shader split · splitting · 211,200/304,243 files · 69% · 0:04 left". The log again gets a line with the count every 30 seconds while a long stage runs, as before the switch to JSON progress. Each field of the build script's events is checked, so a field a later nxnative drops or changes only leaves that part out.
 
 ## 1.7.5 — 2026-10-28

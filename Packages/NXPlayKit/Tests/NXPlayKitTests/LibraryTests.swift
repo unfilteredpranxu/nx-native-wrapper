@@ -22,14 +22,14 @@ import Testing
         Library(defaults: defaults(), isScreenshot: true)  // no devicectl
     }
 
-    private func job(_ name: String, _ status: Job.Status) -> Job {
+    private func job(_ name: String, _ status: Job.Status, kind: Job.Kind = .rebuild) -> Job {
         let game = Game(
             folder: URL(filePath: "/games/\(name)"), name: name, titleID: nil, version: nil,
             languages: [],
             iconURL: nil, buildFolder: nil, ipaURL: nil, xcodeBuildFolder: nil, hasPackages: true,
             state: .ready)
         let job = Job(
-            kind: .rebuild, game: game,
+            kind: kind, game: game,
             command: NXPlayCommand(
                 script: URL(filePath: "/usr/bin/true"), arguments: [], environment: [:]))
         job.showScreenshot(["output"], status: status)

@@ -22,9 +22,7 @@ public struct RootView: View {
             .toolbar(library.consoleMode ? .hidden : .visible, for: .windowToolbar)
             .background(
                 // screenshots show Console Mode in the window, at the README's size, not across a whole screen
-                ConsoleWindowController(consoleMode: library.consoleMode && !library.isScreenshot) {
-                    library.consoleMode = false
-                }
+                ConsoleWindowController(consoleMode: library.consoleMode && !library.isScreenshot)
             )
             .background(DockProgress())
             .safeAreaInset(edge: .top, spacing: 0) {
