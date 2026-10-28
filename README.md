@@ -1,18 +1,18 @@
-# nx-native-wrapper
+# NX Play
 
-**NX Play** is a Mac app (and `nxplay`, the script behind it) that runs Nintendo Switch games natively on a Mac or an iPhone/iPad, through [nxnative](https://github.com/seedds/nxnative). It builds a game once, then starts it straight away the next time.
+**NX Play** is a Mac app (and `nxplay`, the script behind it) that runs Nintendo Switch games natively on a Mac or an iPhone/iPad, through [nxnative](https://github.com/seedds/nxnative). It builds a game once, then starts it straight away the next time. This repository is `nx-native-wrapper`.
 
 - A library of your games with their icons: extract them, play them on the Mac, rebuild them.
+- Console Mode for the couch: full screen, driven by a game controller.
 - Install a game on your iPhone or iPad through Xcode, or build an IPA to sideload.
-- Copy saves between the Mac and a device, after seeing which one is newer.
-- Back up saves to your own private Git repository while you play.
-- Pull nxnative's latest fixes before each run, and rebuild only when they change something.
+- Copy saves between the Mac and a device, after seeing which one is newer, and back them up to your own private Git repository while you play.
+- Pull nxnative's latest fixes before each run and rebuild when they change something, or keep a build that works as it is.
 
 > You need your own games (NSP, NSZ, XCI or XCZ files) and the `prod.keys` of your own Switch. Nothing here downloads games or keys.
 
 ## Why
 
-nxnative can already pack one game into a standalone Mac app (`--platform mac-app`), and [nxnative#104](https://github.com/seedds/nxnative/pull/104) brings a native app bundle with preferences and controller mapping. Those are apps for one game each.
+nxnative can pack a game into a standalone Mac app (`--platform mac-app`), with its own settings window. That's an app for one game.
 
 NX Play takes the other route: one app for all your games, everything portable and in one place.
 
@@ -49,7 +49,7 @@ Put your keys in `~/.switch/prod.keys`, or choose the file in NX Play's Settings
 
 `bin/setup --check` reports what is missing without changing anything. `bin/setup --no-app` skips building the app.
 
-## NX Play
+## Using NX Play
 
 Open NX Play and choose your games folder, with one subfolder per game:
 
@@ -67,14 +67,17 @@ Extracted games show their icons and a **Play** button; the others have **Extrac
 
 Right-click a game for more, or use the **Game** menu:
 
+- **Rebuild**: builds the game again with the current nxnative.
+- **Keep This Build**: for a game that plays well. nxnative updates no longer rebuild it, and a lock badge marks it. While it's kept, Install on Device, Build IPA and Make Mac App are off, since they'd rewrite files the kept build runs. Rebuild still replaces it.
 - **Install on Device**: builds the game with Xcode, signed with your team, then installs and starts it on a connected iPhone or iPad. The device must be paired with Xcode and in Developer Mode.
 - **Build IPA**: an unsigned IPA in the game folder, for AltStore, Sideloadly and the like.
 - **Make Mac App**: a standalone, double-clickable app of the game (nxnative's `--platform mac-app`) in the game folder, for the Dock or Launchpad. It's made of APFS clones of the extracted files, so it takes almost no space on the same volume. It keeps its own save in `~/Library/Application Support/nxnative/<title ID>`, separate from NX Play's.
 - **Transfer Saves**: compares the Mac's save with a device's, file by file, and copies one over the other. The replaced save is kept in `<title ID>_build/run/save-backups`.
 - **Show in Finder**, **Open Save Folder**, **Open Build Logs**.
-- **Save backup** (Settings): pick a clone of your own private Git repository. While a game plays, NX Play copies its save into a folder named after the game and its title ID (`the-legend-of-zelda-tears-of-the-kingdom-0100f2c0115b6000`) each time the game saves, then commits and pushes. It does this once more when the game quits. Pushing uses your own Git setup (SSH agent or keychain) and never prompts. The log shows each backup. Games started from the Terminal with `nxplay` aren't backed up.
 
 ![Transfer Saves: the Mac's save is newer than the iPad's](docs/transfer-saves.webp)
+
+**Save backup** (Settings): pick a clone of your own private Git repository. While a game plays, NX Play copies its save into a folder named after the game and its title ID (`the-legend-of-zelda-tears-of-the-kingdom-0100f2c0115b6000`) each time the game saves, then commits and pushes. It does this once more when the game quits. Pushing uses your own Git setup (SSH agent or keychain) and never prompts. The log shows each backup. Games started from the Terminal with `nxplay` aren't backed up.
 
 **Tools › Free Up Space** lists, per game and with their sizes, what you can delete:
 
@@ -86,9 +89,9 @@ Pick files one by one, a whole game, or a whole kind. Nothing is selected until 
 
 ![Free Up Space: game files, IPAs and Xcode builds per game, with their sizes](docs/free-up-space.webp)
 
-Settings has the nxnative folder, the keys file, the game language, the Apple team for device installs, and Apple's Metal performance HUD. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls.
+Settings has the nxnative folder, the keys file, the Metal compiler check, the game language, full screen and Apple's Metal performance HUD, the save backup repository, and the Apple team for device installs. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls. While builds run, the Dock icon shows their progress.
 
-**On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen, with the games ready to play as a carousel of their artwork, the clock, and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
+**On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen, with the games ready to play as a carousel of their artwork, the one you played last first, plus the clock and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
 
 ![Console Mode: the playable games as a carousel, with the controller's button hints](docs/console.webp)
 
@@ -108,12 +111,13 @@ Settings has the nxnative folder, the keys file, the game language, the Apple te
 ./nxplay --fps ~/Games/MetroidDread        # show the Metal performance HUD
 ./nxplay --fullscreen ~/Games/MetroidDread # start the game in full screen
 ./nxplay --lang ja ~/Games/MetroidDread    # play in another language (DM_LANG), no rebuild
+./nxplay --allow-other-metal ~/Games/MetroidDread   # build with a Metal compiler nxnative didn't test
 ./nxplay ~/Games/MetroidDread -l ja        # extra options go to build_ipa_from_nsp.py
 ```
 
 `xcrun devicectl list devices` lists the device UDIDs.
 
-Each run starts by updating nxnative. New commits are listed, and the game is rebuilt when they change any files, unless its build is kept: NX Play's Keep This Build puts a `keep` file in `<title ID>_build`, and that build then plays as it is until an explicit `--rebuild`. The `./nxnative` clone is only for following upstream: when upstream rewrites its history, nxplay follows it, so keep your own nxnative changes in another clone (`NXNATIVE=/path/to/it`).
+Each run starts by updating nxnative and lists any new commits. A game is rebuilt when its Mac build was made with other nxnative code than the checkout has now, whichever run pulled the update. A kept build is the exception: NX Play's Keep This Build puts a `keep` file in `<title ID>_build`, and that build then plays as it is until an explicit `--rebuild`, while `--ipa`, `--mac-app` and `--device` refuse to run for it. The `./nxnative` clone is only for following upstream: when upstream rewrites its history, nxplay follows it, so keep your own nxnative changes in another clone (`NXNATIVE=/path/to/it`).
 
 The run command is saved in `<game folder>/<title ID>_build/start_mac.sh`. It holds absolute paths, so after you move a game folder (or nxnative), the next run rewrites them to the new location.
 
@@ -140,6 +144,7 @@ Controllers are detected automatically, with buttons by position (right A, botto
 ## Troubleshooting
 
 - **Start with `bin/setup --check`.** It finds most problems.
+- **A game that played well breaks after an nxnative update:** report it to nxnative, Rebuild once a fix lands, and use Keep This Build on games that work to avoid it.
 - **A build fails:** the panel shows the error, and **Open Build Logs** has each step's full output. Games and the build steps themselves are nxnative's: see its [README](https://github.com/seedds/nxnative#readme) and [known issues](https://github.com/seedds/nxnative#known-issues).
 - **No device in Install on Device:** connect it once by cable, trust the Mac, and turn on Developer Mode (Settings › Privacy & Security). **Look Again** refreshes the list.
 - **"No Apple developer team":** sign in under Xcode › Settings › Apple Accounts. A free Personal Team works, but without the Increased Memory Limit, so bigger games may be closed by iOS.
