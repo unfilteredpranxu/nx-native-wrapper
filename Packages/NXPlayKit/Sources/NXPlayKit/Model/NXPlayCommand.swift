@@ -17,7 +17,7 @@ public struct NXPlayCommand: Sendable {
     }
 
     /// A Finder-launched app gets launchd's bare PATH: put mise's shims, ~/.local/bin and Homebrew (dotnet,
-    /// spirv-cross) in front so nxplay finds the same tools as a terminal. The Python packages come from
+    /// zstd, glslang) in front so nxplay finds the same tools as a terminal. The Python packages come from
     /// this checkout's .venv (NXPLAY_VENV), which nxplay puts before all of them.
     public static func environment(
         nxnative: String,

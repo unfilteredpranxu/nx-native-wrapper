@@ -4,9 +4,9 @@ import SwiftUI
 /// The main window: the games of the chosen folder above, the selected game's nxplay output below.
 public struct RootView: View {
     @Environment(Library.self) private var library
+    @Environment(\.openWindow) private var openWindow
     #if DEBUG
         @Environment(\.openSettings) private var openSettings
-        @Environment(\.openWindow) private var openWindow
     #endif
 
     public init() {}
@@ -27,6 +27,11 @@ public struct RootView: View {
                 }
             )
             .background(DockProgress())
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if library.needsSetup, !library.consoleMode { SetupBanner() }
+            }
+            // a first launch, or something setup installed has gone: the window that fixes it
+            .task { if library.needsSetup { openWindow(id: SetupView.windowID) } }
             .sheet(item: Bindable(library).transfer) { transfer in
                 TransferSavesView(transfer: transfer)
             }

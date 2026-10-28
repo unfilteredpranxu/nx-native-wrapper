@@ -119,7 +119,7 @@ public final class Library {
         root = defaults.string(forKey: Keys.root).map {
             URL(filePath: $0, directoryHint: .isDirectory)
         }
-        nxnativePath = defaults.string(forKey: Keys.nxnative) ?? Self.defaultNXNative
+        nxnativePath = defaults.string(forKey: Keys.nxnative) ?? AppHome.defaultNXNative
         keysPath = defaults.string(forKey: Keys.keys) ?? NSHomeDirectory() + "/.switch/prod.keys"
         saveBackupPath = defaults.string(forKey: Keys.saveBackup) ?? ""
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
@@ -161,7 +161,33 @@ public final class Library {
 
     // MARK: - Games
 
+    /// nxnative or the Python environment the builds run with is missing: the app asks to run Setup.
+    public private(set) var needsSetup = false
+
+    /// What bin/setup needs to know, run from the app: our folder, the bundled project files, the paths in Settings,
+    /// and a password prompt for the installers that need an administrator. A developer build keeps the checkout's
+    /// layout (no NXPLAY_HOME: bin/setup as a developer runs it, without building the app).
+    func setupEnvironment() -> [String: String] {
+        var env = NXPlayCommand.environment(
+            nxnative: (nxnativePath as NSString).expandingTildeInPath,
+            keys: (keysPath as NSString).expandingTildeInPath, venv: AppHome.venv.path)
+        if AppHome.sourceRoot == nil {
+            env["NXPLAY_HOME"] = AppHome.folder.path
+            if let project = AppHome.setupProject { env["NXPLAY_PROJECT"] = project.path }
+        }
+        if let askpass = AppHome.setupProject?.appending(path: "askpass") {
+            env["SUDO_ASKPASS"] = askpass.path
+        }
+        return env
+    }
+
     public func refresh() {
+        let fm = FileManager.default
+        let repo = (nxnativePath as NSString).expandingTildeInPath
+        needsSetup =
+            !isScreenshot
+            && (!fm.fileExists(atPath: repo + "/scripts/build_ipa_from_nsp.py")
+                || !fm.isExecutableFile(atPath: AppHome.venv.appending(path: "bin/python3").path))
         games = root.map(GameScanner.scan(root:)) ?? []
         watchCopies()
     }
@@ -356,12 +382,13 @@ public final class Library {
         let fm = FileManager.default
         let repo = (nxnativePath as NSString).expandingTildeInPath
         let keys = (keysPath as NSString).expandingTildeInPath
-        guard let script = Self.script else {
+        guard let script = AppHome.script else {
             problem = "The nxplay script is missing from the app bundle."
             return nil
         }
         guard fm.fileExists(atPath: repo + "/scripts/build_ipa_from_nsp.py") else {
-            problem = "No nxnative checkout at \(repo). Set its folder in Settings."
+            problem =
+                "No nxnative checkout at \(repo). Open Setup to install it, or set its folder in Settings."
             return nil
         }
         // playing a ready game only needs the keys when nxnative changed and it rebuilds; nxplay says so then
@@ -371,7 +398,7 @@ public final class Library {
         }
         let lang = GameLanguage.choose(language, for: game).map { ["--lang", $0] } ?? []
         var environment = NXPlayCommand.environment(
-            nxnative: repo, keys: keys, venv: Self.venv?.path)
+            nxnative: repo, keys: keys, venv: AppHome.venv.path)
         var arguments: [String]
         switch kind {
         case .extract: arguments = ["--build-only", game.folder.path]
@@ -417,29 +444,4 @@ public final class Library {
         "org.nxnative.\(team.id.lowercased()).\(titleID.lowercased())"
     }
 
-    // MARK: - Locations
-
-    /// This repository, baked into Info.plist at build time (NXSourceRoot = $(SRCROOT)).
-    static var sourceRoot: URL? {
-        guard let path = Bundle.main.object(forInfoDictionaryKey: "NXSourceRoot") as? String,
-            !path.isEmpty, !path.contains("$(")
-        else { return nil }
-        return URL(filePath: path, directoryHint: .isDirectory)
-    }
-
-    /// Where nxplay looks too: ./nxnative in this checkout (bin/setup clones it there), else beside it.
-    static var defaultNXNative: String {
-        guard let sourceRoot else { return NSHomeDirectory() + "/projects/nxnative" }
-        let inside = sourceRoot.appending(path: "nxnative")
-        return FileManager.default.fileExists(atPath: inside.path)
-            ? inside.path : sourceRoot.deletingLastPathComponent().appending(path: "nxnative").path
-    }
-
-    /// The checkout's Python environment (bin/setup: uv sync); the bundled nxplay cannot find it by itself.
-    static var venv: URL? { sourceRoot?.appending(path: ".venv", directoryHint: .isDirectory) }
-
-    static var script: URL? {
-        Bundle.main.url(forResource: "nxplay", withExtension: nil)
-            ?? sourceRoot?.appending(path: "nxplay")
-    }
 }

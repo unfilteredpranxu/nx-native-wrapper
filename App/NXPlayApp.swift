@@ -11,6 +11,9 @@ struct NXPlayApp: App {
                 .library(library)
         }
         .commands {
+            CommandGroup(after: .appSettings) {
+                SetupMenuItem()
+            }
             CommandGroup(replacing: .newItem) {
                 Button("Choose Games Folder…") { library.chooseRoot() }
                     .keyboardShortcut("o")
@@ -44,6 +47,12 @@ struct NXPlayApp: App {
                 .library(library)
         }
         .defaultSize(width: 760, height: 680)
+
+        Window("Setup", id: SetupView.windowID) {
+            SetupView()
+                .library(library)
+        }
+        .windowResizability(.contentSize)
 
         Window("Game Controls", id: ControlsView.windowID) {
             ControlsView()

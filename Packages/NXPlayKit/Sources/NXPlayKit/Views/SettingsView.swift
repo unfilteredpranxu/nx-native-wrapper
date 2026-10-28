@@ -32,6 +32,9 @@ public struct SettingsView: View {
                     isValid: exists(library.keysPath))
                 Toggle(
                     "Allow a Metal compiler nxnative didn't test", isOn: $library.allowOtherMetal)
+                LabeledContent("Tools") {
+                    SetupMenuItem()
+                }
             } footer: {
                 Text(
                     "nxplay pulls nxnative before each run and rebuilds a game when new commits arrive. nxnative stops a build when this Mac's Metal compiler (Xcode's) isn't the one it tested its shaders with; the toggle builds anyway, at the risk of shader glitches (nxnative issue #242)."

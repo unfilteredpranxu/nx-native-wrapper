@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Release NX Play from this Mac: version bump, a Developer ID build with the hardened runtime, notarized and stapled,
+# in a notarized DMG, then (after you confirm) the release commit, the tag and the GitHub release with the DMG and the
+# changelog's notes. Nothing is pushed or published before the confirmation; a failure before it restores the files.
+#
+# usage: bin/release <version>          e.g. bin/release 1.7
+# once:  xcrun notarytool store-credentials nxplay-notary --apple-id <you@example.com> --team-id <team ID>
+#        (an app-specific password from account.apple.com); NOTARY_PROFILE names another profile
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+version="${1:-}"
+[[ "$version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "usage: bin/release <version>  (e.g. 1.7)" >&2; exit 2; }
+profile="${NOTARY_PROFILE:-nxplay-notary}"
+app_name="NX Play"
+out="build/release"
+dmg="$out/NX-Play-$version.dmg"
+
+say() { printf '\n\e[1m%s\e[0m\n' "$1"; }
+die() { echo "bin/release: $1" >&2; exit 1; }
+
+say "Checks"
+[[ -z "$(git status --porcelain --untracked-files=no)" ]] || die "uncommitted changes: commit or stash them first"
+branch="$(git symbolic-ref --short HEAD)"
+[[ "$branch" == main ]] || die "on $branch: release from main"
+git fetch -q origin
+[[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || die "main is not origin/main: pull or push first"
+git rev-parse -q --verify "refs/tags/v$version" > /dev/null && die "v$version is tagged already"
+grep -q '^## Unreleased' CHANGELOG.md || die "CHANGELOG.md has no '## Unreleased' section"
+notes="$(awk '/^## Unreleased/ { f = 1; next } /^## / { exit } f' CHANGELOG.md | sed '/./,$!d')"
+[[ -n "$notes" ]] || die "nothing under '## Unreleased' in CHANGELOG.md"
+identity="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -1)"
+[[ -n "$identity" ]] || die "no Developer ID Application certificate in the keychain"
+team="$(sed -n 's/.*(\([A-Z0-9]*\))$/\1/p' <<< "$identity")"
+xcrun notarytool history --keychain-profile "$profile" > /dev/null 2>&1 \
+  || die "no notarytool profile '$profile': xcrun notarytool store-credentials $profile --apple-id <Apple ID> --team-id $team"
+echo "  version $version, signed by $identity, notarized with profile $profile"
+
+# from here on, a failure puts project.yml and CHANGELOG.md back
+restore() { git checkout -q -- project.yml CHANGELOG.md; }
+trap 'restore; echo "bin/release: stopped; project.yml and CHANGELOG.md restored" >&2' ERR INT
+
+say "Version"
+build_number=$(( $(sed -n 's/^ *CURRENT_PROJECT_VERSION: "\([0-9]*\)"/\1/p' project.yml) + 1 ))
+sed -i '' -E "s/^( *MARKETING_VERSION: )\"[^\"]*\"/\1\"$version\"/; s/^( *CURRENT_PROJECT_VERSION: )\"[0-9]*\"/\1\"$build_number\"/" project.yml
+sed -i '' "s/^## Unreleased$/## Unreleased\\
+\\
+## $version — $(date +%Y-%m-%d)/" CHANGELOG.md
+echo "  $version ($build_number)"
+
+say "Build"
+rm -rf "$out"
+if command -v mise > /dev/null; then mise exec -- xcodegen generate --quiet; else xcodegen generate --quiet; fi
+# NX_SOURCE_ROOT empty: the released app keeps nxnative and Python in its own folder, never in this checkout
+xcodebuild -project NXPlay.xcodeproj -scheme NXPlay -configuration Release -destination 'generic/platform=macOS' \
+  -derivedDataPath "$out/derived" -quiet build \
+  CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$identity" DEVELOPMENT_TEAM="$team" \
+  ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS=--timestamp NX_SOURCE_ROOT=
+app="$out/derived/Build/Products/Release/$app_name.app"
+codesign --verify --strict --deep "$app"
+[[ -z "$(/usr/libexec/PlistBuddy -c 'Print :NXSourceRoot' "$app/Contents/Info.plist")" ]] || die "the app still names the checkout"
+echo "  $app"
+
+notarize() {
+  echo "  notarizing $(basename "$1") (a few minutes)…"
+  xcrun notarytool submit "$1" --keychain-profile "$profile" --wait --output-format plist > "$out/notary.plist" || true
+  if [[ "$(/usr/libexec/PlistBuddy -c 'Print :status' "$out/notary.plist" 2>/dev/null)" != Accepted ]]; then
+    id="$(/usr/libexec/PlistBuddy -c 'Print :id' "$out/notary.plist" 2>/dev/null || true)"
+    [[ -n "$id" ]] && xcrun notarytool log "$id" --keychain-profile "$profile" >&2
+    die "notarization of $(basename "$1") was not accepted"
+  fi
+}
+
+say "Notarize the app"
+# stapled, so the app opens offline too, and so the copy auto-update takes out of the DMG carries its ticket
+ditto -c -k --keepParent "$app" "$out/app.zip"
+notarize "$out/app.zip"
+xcrun stapler staple -q "$app"
+
+say "DMG"
+stage="$out/dmg"
+mkdir -p "$stage"
+ditto "$app" "$stage/$app_name.app"
+ln -s /Applications "$stage/Applications"
+hdiutil create -quiet -volname "$app_name" -srcfolder "$stage" -fs APFS -format ULFO "$dmg"
+codesign --sign "$identity" --timestamp "$dmg"
+notarize "$dmg"
+xcrun stapler staple -q "$dmg"
+spctl --assess --type open --context context:primary-signature "$dmg"
+spctl --assess --type execute "$app"
+shasum -a 256 "$dmg" | tee "$dmg.sha256"
+echo "  $dmg ($(du -h "$dmg" | cut -f1))"
+
+trap - ERR INT
+say "Publish"
+echo "$notes" | sed 's/^/  /'
+read -r -p $'\nCommit, tag and publish NX Play '"$version"$' to GitHub? [y/N] ' answer
+if [[ "$answer" != [yY] ]]; then
+  restore
+  echo "not published; project.yml and CHANGELOG.md restored, the DMG stays in $out"
+  exit 0
+fi
+git add project.yml CHANGELOG.md
+git commit -q -m "Release $version [skip ci]"
+git tag -a "v$version" -m "NX Play $version"
+git push -q origin main "v$version"
+gh release create "v$version" "$dmg" --title "NX Play $version" --notes "$notes"
+echo "released: v$version"

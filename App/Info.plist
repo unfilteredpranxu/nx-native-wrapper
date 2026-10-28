@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<!-- this checkout: the app finds nxnative beside it, the way nxplay does -->
-	<key>NXSourceRoot</key>
-	<string>$(SRCROOT)</string>
-</dict>
+  <dict>
+    <!-- the checkout a developer build uses (its .venv and nxnative, as bin/setup made them);
+    bin/release builds
+	     with NX_SOURCE_ROOT empty, so a released app keeps everything in its own folder (AppHome) -->
+    <key>NXSourceRoot</key>
+    <string>$(NX_SOURCE_ROOT)</string>
+  </dict>
 </plist>

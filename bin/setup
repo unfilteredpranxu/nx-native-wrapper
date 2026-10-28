@@ -7,8 +7,29 @@
 # usage: bin/setup [--check] [--no-app]
 #   --check   only report what is missing; change nothing
 #   --no-app  skip building and installing NX Play
+# NX Play runs this same script from its bundle (Settings › Setup), with:
+#   NXPLAY_HOME     its own folder (~/Library/Application Support/NX Play): uv's Python and cache go there, and the
+#                   developer parts (mise, building the app) are left out
+#   NXPLAY_PROJECT  the folder with the Brewfile, pyproject.toml and uv.lock (default: this checkout)
+#   NXPLAY_VENV     the Python environment (default: .venv in the project folder)
+#   NXNATIVE        the nxnative checkout (default: ./nxnative, else ../nxnative)
+#   SUDO_ASKPASS    a password prompt: the .NET SDK's installer and Xcode's first launch then run without a terminal
 set -euo pipefail
-cd "$(dirname "$0")/.."
+project="${NXPLAY_PROJECT:-$(cd "$(dirname "$0")/.." && pwd)}"
+cd "$project"
+app_run=0
+[[ -n "${NXPLAY_HOME:-}" ]] && app_run=1
+# a GUI app doesn't get the shell's PATH: where Homebrew and the .NET SDK put their commands
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/local/share/dotnet:$PATH"
+venv="${NXPLAY_VENV:-$project/.venv}"
+export UV_PROJECT_ENVIRONMENT="$venv"
+if (( app_run )); then
+  # everything NX Play installs in one folder, Python included (not whichever Python the Mac happens to have)
+  export UV_PYTHON_INSTALL_DIR="$NXPLAY_HOME/python" UV_CACHE_DIR="$NXPLAY_HOME/uv-cache" UV_PYTHON_PREFERENCE=only-managed
+  app=0
+fi
+sudo_cmd=(sudo)
+[[ -n "${SUDO_ASKPASS:-}" ]] && sudo_cmd=(sudo -A)
 
 check=0 app=1
 for arg in "$@"; do
@@ -44,6 +65,8 @@ developer="$(xcode-select -p 2>/dev/null || true)"
 if [[ "$developer" == *.app/Contents/Developer ]]; then
   ok "$(xcodebuild -version 2>/dev/null | head -1) ($developer)"
   if xcodebuild -checkFirstLaunchStatus > /dev/null 2>&1; then ok "first launch done (license, components)"
+  elif (( !check )) && [[ -n "${SUDO_ASKPASS:-}" ]]; then
+    step "first launch done (license, components)" "Xcode's first launch failed: sudo xcodebuild -runFirstLaunch" "${sudo_cmd[@]}" xcodebuild -runFirstLaunch
   else fail "Xcode needs its first launch (license, components): sudo xcodebuild -runFirstLaunch"; fi
   if xcodebuild -showsdks 2>/dev/null | grep -q iphoneos; then ok "iOS platform"
   else warn "no iOS platform: IPAs and Install on Device need it: xcodebuild -downloadPlatform iOS"; fi
@@ -58,14 +81,14 @@ fi
 
 section "Tools"
 if ! command -v brew > /dev/null; then
-  fail "Homebrew is not installed: https://brew.sh"
+  fail "Homebrew is not installed: install it from https://brew.sh (one command in Terminal), then check again"
 elif (( check )); then
   if brew bundle check --file Brewfile --no-upgrade > /dev/null 2>&1; then ok "Homebrew tools (Brewfile)"
   else fail "Homebrew tools missing: brew bundle --file Brewfile"; fi
 else
   step "Homebrew tools (Brewfile)" "brew bundle failed" brew bundle --file Brewfile --no-upgrade
 fi
-if command -v mise > /dev/null; then
+if (( !app_run )) && command -v mise > /dev/null; then
   if (( check )); then ok "mise: $(mise --version 2>/dev/null | awk '{print $1}') (mise.toml)"
   else mise trust --quiet 2>/dev/null; step "mise tools (mise.toml)" "mise install failed" mise install --quiet; fi
 fi
@@ -76,10 +99,10 @@ section "Python (.venv)"
 if ! command -v uv > /dev/null; then
   fail "uv is not installed: brew install uv"
 elif (( check )); then
-  if .venv/bin/python3 -c 'import lz4, capstone, fontTools, nsz' 2> /dev/null; then ok "$(.venv/bin/python3 --version) with nxnative's packages"
+  if "$venv/bin/python3" -c 'import lz4, capstone, fontTools, nsz' 2> /dev/null; then ok "$("$venv/bin/python3" --version) with nxnative's packages"
   else fail "the Python packages are missing: uv sync --locked"; fi
 else
-  if uv sync --locked --quiet; then ok "$(.venv/bin/python3 --version) with nxnative's packages (uv.lock)"
+  if uv sync --locked --quiet; then ok "$("$venv/bin/python3" --version) with nxnative's packages (uv.lock)"
   else fail "uv sync failed"; fi
 fi
 
@@ -108,22 +131,27 @@ keys="${NX_KEYS:-$HOME/.switch/prod.keys}"
 if [[ -f "$keys" ]]; then ok "prod.keys at $keys"
 else warn "no prod.keys at $keys: dump them from your own Switch and put them there (or choose the file in NX Play's Settings)"; fi
 
-section "NX Play"
-if (( check )); then
-  if [[ -d "/Applications/NX Play.app" ]]; then ok "installed in /Applications"
-  else warn "not installed: bin/install"; fi
-elif (( !app )); then
-  warn "skipped (--no-app): bin/install builds and installs it"
-elif (( failures )); then
-  warn "not built: fix the ✗ above first"
-else
-  step "installed in /Applications" "bin/install failed" bin/install
+# run from NX Play itself: there is nothing to build
+if (( !app_run )); then
+  section "NX Play"
+  if (( check )); then
+    if [[ -d "/Applications/NX Play.app" ]]; then ok "installed in /Applications"
+    else warn "not installed: bin/install"; fi
+  elif (( !app )); then
+    warn "skipped (--no-app): bin/install builds and installs it"
+  elif (( failures )); then
+    warn "not built: fix the ✗ above first"
+  else
+    step "installed in /Applications" "bin/install failed" bin/install
+  fi
 fi
 
 echo
 if (( failures )); then
-  echo "${red}$failures problem$( (( failures == 1 )) || echo s) to fix${reset}; then run bin/setup again."
+  if (( app_run )); then again="check again"; else again="run bin/setup again"; fi
+  echo "${red}$failures problem$( (( failures == 1 )) || echo s) to fix${reset}; then $again."
   exit 1
 fi
 if (( check )); then echo "${green}All set.${reset}"
+elif (( app_run )); then echo "${green}Done.${reset}"
 else echo "${green}Done.${reset} Open NX Play, choose your games folder (one subfolder per game) and press Play."; fi

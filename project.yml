@@ -30,6 +30,29 @@ targets:
         buildPhase: resources
       - path: nxplay
         buildPhase: resources
+    postCompileScripts:
+      # the setup NX Play runs from Settings › Setup: bin/setup with the files it reads (AppHome.setupProject)
+      - name: Bundle the setup
+        script: |
+          dir="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Setup"
+          mkdir -p "$dir"
+          cp "$SRCROOT/bin/setup" "$dir/setup"
+          cp "$SRCROOT/bin/askpass" "$dir/askpass"
+          cp "$SRCROOT/Brewfile" "$SRCROOT/pyproject.toml" "$SRCROOT/uv.lock" "$SRCROOT/.python-version" "$dir/"
+        inputFiles:
+          - $(SRCROOT)/bin/setup
+          - $(SRCROOT)/bin/askpass
+          - $(SRCROOT)/Brewfile
+          - $(SRCROOT)/pyproject.toml
+          - $(SRCROOT)/uv.lock
+          - $(SRCROOT)/.python-version
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Setup/setup
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Setup/askpass
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Setup/Brewfile
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Setup/pyproject.toml
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Setup/uv.lock
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Setup/.python-version
     dependencies:
       - package: NXPlayKit
     settings:
@@ -38,6 +61,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.varyform.nxplay
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: App/Info.plist
+        # Info.plist's NXSourceRoot (AppHome.sourceRoot); bin/release empties it
+        NX_SOURCE_ROOT: $(SRCROOT)
         INFOPLIST_KEY_CFBundleDisplayName: NX Play
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

@@ -54,7 +54,7 @@
             let defaults = UserDefaults(suiteName: suite)!
             defaults.removePersistentDomain(forName: suite)
             let library = Library(defaults: defaults, isScreenshot: true)
-            library.nxnativePath = Self.tilde(Library.defaultNXNative)
+            library.nxnativePath = Self.tilde(AppHome.defaultNXNative)
             library.keysPath = "~/.switch/prod.keys"
             library.teams = [Self.team]
             library.devices = Self.devices

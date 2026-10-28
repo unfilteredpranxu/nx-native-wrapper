@@ -25,11 +25,25 @@ NX Play takes the other route: one app for all your games, everything portable a
 ## Requirements
 
 - A Mac with Apple silicon and macOS 15 or later. On an Intel Mac, IPAs and device installs work, but games cannot run on the Mac.
-- [Xcode](https://apps.apple.com/app/xcode/id497799835), opened once, with its Metal Toolchain (`bin/setup` downloads it). For iPhone and iPad, its iOS platform too.
-- [Homebrew](https://brew.sh).
+- [Xcode](https://apps.apple.com/app/xcode/id497799835), opened once. Setup downloads its Metal Toolchain. For iPhone and iPad, its iOS platform too.
+- [Homebrew](https://brew.sh): Setup installs the other tools with it.
 - For Install on Device: an Apple developer account, signed in under Xcode › Settings › Apple Accounts.
 
-## Setup
+## Install
+
+1. Download the DMG from the [latest release](https://github.com/varyform/nx-native-wrapper/releases/latest) and drag NX Play into Applications.
+2. Install [Homebrew](https://brew.sh) if you don't have it: one command in Terminal.
+3. Open NX Play. **Setup** opens by itself (later: NX Play › Setup…). It checks the Mac and Xcode and says what to fix. **Install Missing** then:
+   - downloads Xcode's Metal Toolchain, which every build needs to compile the game's shaders;
+   - installs the tools with Homebrew (uv, xcodegen, zstd, glslang, the .NET SDK), asking for your password for the .NET SDK;
+   - installs Python and nxnative's packages with [uv](https://docs.astral.sh/uv/), leaving any other Python alone;
+   - clones nxnative.
+
+Everything except Homebrew's tools goes into one folder, `~/Library/Application Support/NX Play` (Setup's **Open Folder**).
+
+Put your keys in `~/.switch/prod.keys`, or choose the file in Settings.
+
+### From the source
 
 ```sh
 git clone https://github.com/varyform/nx-native-wrapper.git
@@ -37,17 +51,7 @@ cd nx-native-wrapper
 bin/setup
 ```
 
-`bin/setup` can be run again at any time. It:
-
-1. checks the Mac and Xcode, and says what to fix; downloads Xcode's Metal Toolchain if it's missing (`xcodebuild -downloadComponent MetalToolchain`), since every build compiles the game's shaders with it;
-2. installs the tools with Homebrew (`Brewfile`: uv, xcodegen, zstd, spirv-cross, glslang, the .NET SDK), and the ones in `mise.toml` if you use [mise](https://mise.jdx.dev);
-3. installs nxnative's Python packages into `.venv` in this folder with [uv](https://docs.astral.sh/uv/) (`pyproject.toml`, `uv.lock`), leaving your global Python alone;
-4. clones nxnative into `./nxnative`;
-5. builds NX Play and installs it into `/Applications`.
-
-Put your keys in `~/.switch/prod.keys`, or choose the file in NX Play's Settings.
-
-`bin/setup --check` reports what is missing without changing anything. `bin/setup --no-app` skips building the app.
+`bin/setup` is the same script Setup runs, for a checkout: it also installs the tools in `mise.toml` if you use [mise](https://mise.jdx.dev), puts the Python packages into `.venv` and nxnative into `./nxnative` in the checkout, and builds NX Play into `/Applications`. A build from the checkout keeps using those. `bin/setup --check` reports what is missing without changing anything; `bin/setup --no-app` skips building the app.
 
 ## Using NX Play
 
@@ -156,7 +160,10 @@ bin/build        # build/Build/Products/Release/NX Play.app
 bin/install      # build and install into /Applications (or: bin/install ~/Applications)
 mise run app     # build and open it
 mise run test    # NXPlayKit tests (swift test --package-path Packages/NXPlayKit)
+bin/release 1.7  # release: sign, notarize, DMG, then (after you confirm) commit, tag and publish
 ```
+
+`bin/release` needs a Developer ID Application certificate and a notarytool profile (`xcrun notarytool store-credentials nxplay-notary`). It moves the changelog's Unreleased notes under the new version and bumps the version in `project.yml`. It builds with the hardened runtime and without the checkout's paths, so the release keeps everything in its own folder. The app and the DMG are notarized and stapled. Nothing is committed, pushed or published until you confirm, and the DMG stays in `build/release`.
 
 To work in Xcode, run `xcodegen generate` (or `mise run generate`) and open `NXPlay.xcodeproj`. The code lives in the `Packages/NXPlayKit` Swift package; `project.yml` describes the app.
 
