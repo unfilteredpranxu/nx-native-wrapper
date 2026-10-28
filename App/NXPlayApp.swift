@@ -11,6 +11,9 @@ struct NXPlayApp: App {
                 .library(library)
         }
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                AboutMenuItem()
+            }
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesMenuItem()
                     .library(library)

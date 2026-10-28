@@ -65,6 +65,7 @@ targets:
         NX_SOURCE_ROOT: $(SRCROOT)
         INFOPLIST_KEY_CFBundleDisplayName: NX Play
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Oleh Khomei. MIT License."
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # runs nxplay, python, git and the game from the user's folders: no sandbox
         ENABLE_APP_SANDBOX: NO

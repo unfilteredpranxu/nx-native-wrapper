@@ -6,12 +6,14 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ### Added
 
+- **About NX Play** now shows the copyright, who makes NX Play, and links: GitHub, Releases, Report a Problem, nxnative and the MIT License.
+
 - **Uninstall NX Play also removes NX Play from the Dock** when you'd kept it there, so no icon pointing at the Trash stays behind. The Dock restarts for a moment to pick up the change.
 
 ### Changed
 
 - **A build no longer makes its card taller:** its progress shows as a thin bar along the bottom of the game's artwork, and the badge shows the percentage ("Extracting · 64%"). The stage is in the card's tooltip. In the list, the bar sits beside the badge, so the row stays one line.
-- Cards are a little wider at their narrowest: 180 points instead of 168, so the badge and the button fit side by side more easily.
+- Cards are a little wider at their narrowest: 180 points instead of 168, so the badge and the button fit side by side more easily. Their artwork now lines up with the section title, with the selection highlight reaching into the margin as in Photos, and the gap between artworks is even.
 - **The log starts hidden for new users:** the status bar shows what's building, and a failed build opens the log on its game. If you already use NX Play, the log stays as you left it.
 - **A status bar while the log is hidden** shows what's building: the game, its stage, the time left and Cancel. With several builds, it shows how many, how many are waiting, and their average progress. Click it to select the game, or show the log from it.
 - **Build progress comes from nxnative's front-end interface:** the build script's `--progress json` events ([docs/frontends.md](https://github.com/seedds/nxnative/blob/main/docs/frontends.md)). NX Play no longer reads the text it prints for people. The progress bar, the card and the Dock follow exact stage fractions, and now also show the time left in a stage. The log shows the same lines as before. In a terminal, `nxplay` still shows the build's bar.
