@@ -4,6 +4,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+## 1.7.5 — 2026-10-28
+
 ### Added
 
 - **About NX Play** now shows the copyright, who makes NX Play, and links: GitHub, Releases, Report a Problem, nxnative and the MIT License.
