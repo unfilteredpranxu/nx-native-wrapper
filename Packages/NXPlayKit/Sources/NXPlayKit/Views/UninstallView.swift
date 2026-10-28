@@ -127,6 +127,7 @@ public struct UninstallView: View {
         switch kind {
         case .folder: "folder"
         case .settings: "gearshape"
+        case .dock: "dock.rectangle"
         case .app: "trash"
         }
     }

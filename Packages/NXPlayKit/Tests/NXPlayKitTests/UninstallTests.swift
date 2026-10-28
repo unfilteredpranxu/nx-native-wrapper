@@ -46,6 +46,45 @@ import Testing
         #expect(tools.map(\.cask) == [false, false, true])
     }
 
+    @Test func unpinsOnlyThisAppFromTheDock() throws {
+        // a stand-in for com.apple.dock: the real one is never written by a test
+        let dock = testDefaultsName()
+        defer { removeTestDefaults(dock) }
+        func app(_ bundleID: String, _ path: String) -> [String: Any] {
+            [
+                "GUID": Int.random(in: 1...999_999), "tile-type": "file-tile",
+                "tile-data": [
+                    "bundle-identifier": bundleID, "file-label": path,
+                    "file-data": ["_CFURLString": "file://\(path)/", "_CFURLStringType": 15],
+                ],
+            ]
+        }
+        let apps = [
+            app("com.apple.Safari", "/Applications/Safari.app"),
+            app("com.varyform.nxplay", "/Applications/NX Play.app"),
+            app("dev.zed.Zed", "/Applications/Zed.app"),
+            app("com.varyform.nxplay", "/Users/me/Apps/NX Play.app"),
+        ]
+        CFPreferencesSetAppValue("persistent-apps" as CFString, apps as CFArray, dock as CFString)
+        CFPreferencesSetAppValue("orientation" as CFString, "left" as CFString, dock as CFString)
+        CFPreferencesAppSynchronize(dock as CFString)
+
+        #expect(Uninstaller.dockEntries(of: "com.varyform.nxplay", in: dock) == 2)
+        #expect(Uninstaller.removeDockEntries(of: "com.varyform.nxplay", in: dock) == 2)
+        let left = try #require(
+            CFPreferencesCopyAppValue("persistent-apps" as CFString, dock as CFString)
+                as? [[String: Any]])
+        #expect(
+            left.compactMap { ($0["tile-data"] as? [String: Any])?["bundle-identifier"] as? String }
+                == ["com.apple.Safari", "dev.zed.Zed"])
+        #expect(
+            left.map { $0["GUID"] as? Int } == [apps[0]["GUID"] as? Int, apps[2]["GUID"] as? Int])
+        #expect(
+            CFPreferencesCopyAppValue("orientation" as CFString, dock as CFString) as? String
+                == "left")
+        #expect(Uninstaller.removeDockEntries(of: "com.varyform.nxplay", in: dock) == 0)  // nothing more
+    }
+
     @Test func keepsOnlyNamesFromHomebrewsOutput() {
         let output = """
             Warning: Calling `postflight` is deprecated! Use `postflight_steps` instead.

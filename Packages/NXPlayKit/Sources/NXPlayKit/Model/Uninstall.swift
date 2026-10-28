@@ -13,7 +13,7 @@ import Observation
 @MainActor @Observable
 public final class Uninstaller {
     public struct Item: Identifiable, Sendable {
-        public enum Kind: Sendable { case folder, settings, app }
+        public enum Kind: Sendable { case folder, settings, dock, app }
         public let id: String
         public let title: String
         public let detail: String
@@ -48,17 +48,60 @@ public final class Uninstaller {
     let appHome: URL
     let bundle: URL
     let domain: String
+    /// The Dock's preferences: pinned apps are its persistent-apps (another domain in tests).
+    let dockDomain: String
 
     public init(
         home: URL = FileManager.default.homeDirectoryForCurrentUser, appHome: URL = AppHome.folder,
         bundle: URL = Bundle.main.bundleURL,
-        domain: String = Bundle.main.bundleIdentifier ?? "com.varyform.nxplay"
+        domain: String = Bundle.main.bundleIdentifier ?? "com.varyform.nxplay",
+        dockDomain: String = "com.apple.dock"
     ) {
         self.home = home
         self.appHome = appHome
         self.bundle = bundle
         self.domain = domain
+        self.dockDomain = dockDomain
         items = Self.items(home: home, appHome: appHome, bundle: bundle, domain: domain)
+        if Self.dockEntries(of: domain, in: dockDomain) > 0 {
+            items.insert(
+                Item(
+                    id: "dock", title: "Dock icon",
+                    detail: "NX Play kept in the Dock; the Dock restarts",
+                    kind: .dock, url: nil),
+                at: items.count - 1)
+        }
+    }
+
+    // MARK: - Dock
+
+    /// How many of the Dock's pinned apps are this app (by bundle ID, so a copy outside Applications counts too).
+    nonisolated static func dockEntries(of bundleID: String, in dockDomain: String) -> Int {
+        pinnedApps(dockDomain).filter { isEntry($0, of: bundleID) }.count
+    }
+
+    /// Unpins the app: persistent-apps without its entries, through cfprefsd as `defaults write` does, so the Dock
+    /// reads it when it restarts; nothing else in the list changes. The Dock has no public API for this; uninstallers
+    /// do it this way. → how many entries went.
+    @discardableResult
+    nonisolated static func removeDockEntries(of bundleID: String, in dockDomain: String) -> Int {
+        let apps = pinnedApps(dockDomain)
+        let kept = apps.filter { !isEntry($0, of: bundleID) }
+        guard kept.count < apps.count else { return 0 }
+        CFPreferencesSetAppValue(
+            "persistent-apps" as CFString, kept as CFArray, dockDomain as CFString)
+        CFPreferencesAppSynchronize(dockDomain as CFString)
+        return apps.count - kept.count
+    }
+
+    nonisolated private static func pinnedApps(_ dockDomain: String) -> [[String: Any]] {
+        CFPreferencesAppSynchronize(dockDomain as CFString)
+        return CFPreferencesCopyAppValue("persistent-apps" as CFString, dockDomain as CFString)
+            as? [[String: Any]] ?? []
+    }
+
+    nonisolated private static func isEntry(_ app: [String: Any], of bundleID: String) -> Bool {
+        (app["tile-data"] as? [String: Any])?["bundle-identifier"] as? String == bundleID
     }
 
     /// What there is to remove, existing items only; sizes come later (measure).
@@ -197,6 +240,10 @@ public final class Uninstaller {
             }
         }
         phase = .finishing
+        // the Dock restarts while NX Play still runs: one that stayed up could write its list, pin included, back
+        if Self.removeDockEntries(of: domain, in: dockDomain) > 0, dockDomain == "com.apple.dock" {
+            _ = await Task.detached { Self.run("/usr/bin/killall", ["Dock"]) }.value
+        }
         let folders = items.filter { $0.kind == .folder }.compactMap(\.url)
         Self.cleanUp(afterPID: getpid(), folders: folders, domain: domain)
         do {

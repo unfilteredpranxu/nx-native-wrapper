@@ -41,7 +41,7 @@ NX Play takes the other route: one app for all your games, everything portable a
 
 Everything except Homebrew's tools goes into one folder, `~/Library/Application Support/NX Play` (Setup's **Open Folder**).
 
-**NX Play › Uninstall NX Play…** removes it again: its folder, settings, caches and window state, and the app, which goes to the Trash. It can also remove the Homebrew tools Setup installed. It leaves your games folder (the games, their builds and their saves), `prod.keys`, the save backup repository and Homebrew itself.
+**NX Play › Uninstall NX Play…** removes it again: its folder, settings, caches and window state, its Dock icon if you kept it there, and the app, which goes to the Trash. It can also remove the Homebrew tools Setup installed. It leaves your games folder (the games, their builds and their saves), `prod.keys`, the save backup repository and Homebrew itself.
 
 NX Play updates itself. It checks GitHub for a new release at launch and once a day (or now, with NX Play › Check for Updates…), and downloads it, verifying its checksum, signature and notarization. The update installs when you quit, or now with **Restart to Update**.
 

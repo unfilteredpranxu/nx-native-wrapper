@@ -4,6 +4,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+### Added
+
+- **Uninstall NX Play also removes NX Play from the Dock** when you'd kept it there, so no icon pointing at the Trash stays behind. The Dock restarts for a moment to pick up the change.
+
 ## 1.7.2 — 2026-10-28
 
 ### Fixed
