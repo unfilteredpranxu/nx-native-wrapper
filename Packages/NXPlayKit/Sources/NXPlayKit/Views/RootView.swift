@@ -28,7 +28,14 @@ public struct RootView: View {
             )
             .background(DockProgress())
             .safeAreaInset(edge: .top, spacing: 0) {
-                if library.needsSetup, !library.consoleMode { SetupBanner() }
+                if !library.consoleMode {
+                    VStack(spacing: 0) {
+                        if library.needsSetup { SetupBanner() }
+                        if case .ready(let version, _) = library.updater.state {
+                            UpdateBanner(version: version)
+                        }
+                    }
+                }
             }
             // a first launch, or something setup installed has gone: the window that fixes it
             .task { if library.needsSetup { openWindow(id: SetupView.windowID) } }

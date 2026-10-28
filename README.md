@@ -41,6 +41,8 @@ NX Play takes the other route: one app for all your games, everything portable a
 
 Everything except Homebrew's tools goes into one folder, `~/Library/Application Support/NX Play` (Setup's **Open Folder**).
 
+NX Play updates itself. It checks GitHub for a new release at launch and once a day, and downloads it, verifying its checksum, signature and notarization. The update installs when you quit, or now with **Restart to Update**.
+
 Put your keys in `~/.switch/prod.keys`, or choose the file in Settings.
 
 ### From the source
@@ -163,7 +165,7 @@ mise run test    # NXPlayKit tests (swift test --package-path Packages/NXPlayKit
 bin/release 1.7  # release: sign, notarize, DMG, then (after you confirm) commit, tag and publish
 ```
 
-`bin/release` needs a Developer ID Application certificate and a notarytool profile (`xcrun notarytool store-credentials nxplay-notary`). It moves the changelog's Unreleased notes under the new version and bumps the version in `project.yml`. It builds with the hardened runtime and without the checkout's paths, so the release keeps everything in its own folder. The app and the DMG are notarized and stapled. Nothing is committed, pushed or published until you confirm, and the DMG stays in `build/release`.
+`bin/release` needs a Developer ID Application certificate and a notarytool profile (`xcrun notarytool store-credentials nxplay-notary`). It moves the changelog's Unreleased notes under the new version and bumps the version in `project.yml`. It builds with the hardened runtime and without the checkout's paths, so the release keeps everything in its own folder. The app and the DMG are notarized and stapled. Nothing is committed, pushed or published until you confirm, and the DMG stays in `build/release`. Released apps update from the latest GitHub release's DMG, using the SHA-256 digest GitHub records for each uploaded asset.
 
 When NX Play is running, `bin/install` asks it to quit once no game, build or file work is running, waits for that, replaces it and opens it again.
 

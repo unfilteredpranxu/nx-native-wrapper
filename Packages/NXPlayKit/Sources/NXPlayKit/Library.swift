@@ -89,6 +89,8 @@ public final class Library {
     }
     /// The controller as a remote: moves the selection, plays, toggles Console Mode.
     public let gamepad = Gamepad()
+    /// Updates from GitHub releases (a released app only).
+    public let updater = AppUpdater()
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var queue: [Job] = []
@@ -96,7 +98,7 @@ public final class Library {
     @ObservationIgnored private let saveBackup = SaveBackup()
     @ObservationIgnored private var installObservers: [any NSObjectProtocol] = []
     /// bin/install asked NX Play to quit once nothing is running, to replace it (quitWhenIdleNotification).
-    @ObservationIgnored private(set) var quitsWhenIdle = false
+    public private(set) var quitsWhenIdle = false
     /// File work outside the jobs that quitting would cut short: Free Up Space deleting, a save transfer copying.
     @ObservationIgnored private var tasksInFlight = 0
     /// Screenshot mode (Screenshots.swift): sample teams and devices that Xcode and devicectl must not replace.
@@ -139,10 +141,16 @@ public final class Library {
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.stopAll() }
+            MainActor.assumeIsolated {
+                self?.stopAll()
+                self?.updater.installOnQuit()
+            }
         }
         gamepad.onCommand = { [weak self] in self?.handle($0) }
-        if !isScreenshot { observeInstall() }
+        if !isScreenshot {
+            observeInstall()
+            updater.start()
+        }
         refresh()
         refreshDevices()
     }
@@ -399,6 +407,13 @@ public final class Library {
         await work()
         tasksInFlight -= 1
         quitIfIdle()
+    }
+
+    /// Installs the staged update now: NX Play quits once no game, build or file work runs, and opens again.
+    public func restartToUpdate() {
+        guard case .ready = updater.state else { return }
+        updater.relaunchAfterUpdate()
+        requestQuitWhenIdle(true)
     }
 
     func requestQuitWhenIdle(_ on: Bool) {

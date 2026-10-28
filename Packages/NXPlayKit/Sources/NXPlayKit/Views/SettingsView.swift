@@ -89,6 +89,17 @@ public struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
+            Section {
+                UpdateSettings()
+            } footer: {
+                Text(
+                    library.updater.isEnabled
+                        ? "NX Play looks for a new release on GitHub at launch and once a day, and downloads it. It installs when you quit, or now with Restart to Update."
+                        : "This copy was built from the source: update it with git pull and bin/install."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
         }
         .onAppear { library.refreshDevices() }
         .formStyle(.grouped)
