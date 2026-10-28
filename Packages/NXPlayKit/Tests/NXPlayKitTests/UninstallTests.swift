@@ -116,7 +116,10 @@ import Testing
             afterPID: app.processIdentifier, folders: [appHome, caches], domain: domain)
         try await Task.sleep(for: .milliseconds(200))
         #expect(FileManager.default.fileExists(atPath: appHome.path))  // the app still runs
-        for _ in 0..<50 where FileManager.default.fileExists(atPath: appHome.path) {
+        // the shell removes one folder after the other: wait for both
+        for _ in 0..<50
+        where [appHome, caches].contains(where: { FileManager.default.fileExists(atPath: $0.path) })
+        {
             try await Task.sleep(for: .milliseconds(100))
         }
         #expect(!FileManager.default.fileExists(atPath: appHome.path))

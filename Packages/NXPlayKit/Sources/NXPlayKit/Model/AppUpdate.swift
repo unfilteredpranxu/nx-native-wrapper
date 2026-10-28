@@ -144,14 +144,26 @@ public final class AppUpdater {
     ) throws {
         let mount = FileManager.default.temporaryDirectory.appending(
             path: "nxplay-update-\(UUID().uuidString)")
-        let attach = run(
-            "/usr/bin/hdiutil",
-            [
-                "attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mount.path,
-                dmg.path,
-            ])
+        // disk arbitration can be busy for a moment ("Resource temporarily unavailable"), and a volume a check still
+        // has open won't detach at once: a few tries each, so no image stays attached
+        var attach = (code: Int32(-1), output: "")
+        for attempt in 0..<3 {
+            if attempt > 0 { Thread.sleep(forTimeInterval: 1) }
+            attach = run(
+                "/usr/bin/hdiutil",
+                [
+                    "attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mount.path,
+                    dmg.path,
+                ])
+            if attach.code == 0 { break }
+        }
         guard attach.code == 0 else { throw UpdateError("the DMG didn't open: \(attach.output)") }
-        defer { _ = run("/usr/bin/hdiutil", ["detach", "-force", mount.path]) }
+        defer {
+            for attempt in 0..<5 {
+                if attempt > 0 { Thread.sleep(forTimeInterval: 1) }
+                if run("/usr/bin/hdiutil", ["detach", "-force", mount.path]).code == 0 { break }
+            }
+        }
 
         let app = mount.appending(path: "NX Play.app")
         let info = NSDictionary(contentsOf: app.appending(path: "Contents/Info.plist"))
