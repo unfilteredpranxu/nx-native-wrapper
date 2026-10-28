@@ -39,7 +39,10 @@ echo "  version $version, signed by $identity, notarized with profile $profile"
 # from here on, any exit before publishing (a failed step, die, Ctrl-C) puts project.yml and CHANGELOG.md back
 restore() { git checkout -q -- project.yml CHANGELOG.md; }
 finished=0
-trap 'if (( !finished )); then restore; echo "bin/release: stopped; project.yml and CHANGELOG.md restored" >&2; fi' EXIT
+on_exit() {
+  if (( !finished )); then restore; echo "bin/release: stopped; project.yml and CHANGELOG.md restored" >&2; fi
+}
+trap on_exit EXIT
 trap 'exit 130' INT
 
 say "Version"
@@ -98,7 +101,7 @@ shasum -a 256 "$dmg" | tee "$dmg.sha256"
 echo "  $dmg ($(du -h "$dmg" | cut -f1))"
 
 say "Publish"
-echo "$notes" | sed 's/^/  /'
+printf '  %s\n' "${notes//$'\n'/$'\n  '}"
 read -r -p $'\nCommit, tag and publish NX Play '"$version"$' to GitHub? [y/N] ' answer
 if [[ "$answer" != [yY] ]]; then
   restore
