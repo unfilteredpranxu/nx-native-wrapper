@@ -27,7 +27,7 @@ struct GameCard: View {
             }
             GameStatus(game: game, job: job)
         }
-        .padding(10)
+        .padding(GameGrid.cardInset)
         .background(
             RoundedRectangle(cornerRadius: 14).fill(
                 isSelected ? Color.accentColor.opacity(0.15) : .clear)

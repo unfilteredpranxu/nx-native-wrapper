@@ -4,8 +4,17 @@ import SwiftUI
 struct GameGrid: View {
     @Environment(Library.self) private var library
 
+    /// A card pads its content by `cardInset` for its selection highlight: the grid sits that much further out, so the
+    /// artwork lines up with the section title (the highlight reaches into the margin, as in Photos), and the cards'
+    /// spacing is what's left of the gap between two artworks.
+    static let margin = 20.0
+    static let cardInset = 10.0
+    static let artworkGap = 24.0
+
     private let columns = [
-        GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 16, alignment: .top)
+        GridItem(
+            .adaptive(minimum: 180, maximum: 220), spacing: artworkGap - 2 * cardInset,
+            alignment: .top)
     ]
 
     var body: some View {
@@ -29,7 +38,8 @@ struct GameGrid: View {
                             section("Not Extracted", remaining, extractAll: true)
                         }
                     }
-                    .padding(20)
+                    .padding(.vertical, Self.margin)
+                    .padding(.horizontal, Self.margin - Self.cardInset)
                 }
             }
             .background(.background)
@@ -53,6 +63,7 @@ struct GameGrid: View {
                         .disabled(library.extractableGames.isEmpty)
                 }
             }
+            .padding(.horizontal, Self.cardInset)
             LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
                 ForEach(games) { game in
                     GameCard(
