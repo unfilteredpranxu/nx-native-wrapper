@@ -14,6 +14,10 @@ struct NXPlayApp: App {
             CommandGroup(after: .appSettings) {
                 SetupMenuItem()
             }
+            CommandGroup(after: .appVisibility) {
+                Divider()
+                UninstallMenuItem()
+            }
             CommandGroup(replacing: .newItem) {
                 Button("Choose Games Folder…") { library.chooseRoot() }
                     .keyboardShortcut("o")
@@ -50,6 +54,12 @@ struct NXPlayApp: App {
 
         Window("Setup", id: SetupView.windowID) {
             SetupView()
+                .library(library)
+        }
+        .windowResizability(.contentSize)
+
+        Window("Uninstall NX Play", id: UninstallView.windowID) {
+            UninstallView()
                 .library(library)
         }
         .windowResizability(.contentSize)
