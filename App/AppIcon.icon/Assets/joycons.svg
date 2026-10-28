@@ -1,18 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
   <title>joycons</title>
-  <!-- left: rounded outer edge, square inner edge against the screen -->
-  <path d="M262,322 L262,702 L182,702 A80,80 0 0 1 102,622 L102,402 A80,80 0 0 1 182,322 Z" fill="#00b8d9"/>
-  <circle cx="182" cy="432" r="36" fill="#0a5f70"/>
-  <circle cx="182" cy="556" r="15" fill="#0a5f70"/>
-  <circle cx="182" cy="624" r="15" fill="#0a5f70"/>
-  <circle cx="148" cy="590" r="15" fill="#0a5f70"/>
-  <circle cx="216" cy="590" r="15" fill="#0a5f70"/>
-  <!-- right -->
-  <path d="M762,322 L842,322 A80,80 0 0 1 922,402 L922,622 A80,80 0 0 1 842,702 L762,702 Z" fill="#ff4f5e"/>
-  <circle cx="842" cy="398" r="15" fill="#8a1d27"/>
-  <circle cx="842" cy="466" r="15" fill="#8a1d27"/>
-  <circle cx="808" cy="432" r="15" fill="#8a1d27"/>
-  <circle cx="876" cy="432" r="15" fill="#8a1d27"/>
-  <circle cx="842" cy="590" r="36" fill="#8a1d27"/>
+  <g transform="translate(512 512) scale(1.5161) translate(-512 -512)">
+<path d="M415.0,322 L415.0,702 L335.0,702 A80,80 0 0 1 255.0,622 L255.0,402 A80,80 0 0 1 335.0,322 Z" fill="#00b8d9"/>
+<circle cx="335.0" cy="432" r="36" fill="#0a5f70"/>
+<circle cx="335.0" cy="556" r="15" fill="#0a5f70"/><circle cx="335.0" cy="624" r="15" fill="#0a5f70"/>
+<circle cx="301.0" cy="590" r="15" fill="#0a5f70"/><circle cx="369.0" cy="590" r="15" fill="#0a5f70"/>
+<path d="M609.0,322 L689.0,322 A80,80 0 0 1 769.0,402 L769.0,622 A80,80 0 0 1 689.0,702 L609.0,702 Z" fill="#ff4f5e"/>
+<circle cx="689.0" cy="398" r="15" fill="#8a1d27"/><circle cx="689.0" cy="466" r="15" fill="#8a1d27"/>
+<circle cx="655.0" cy="432" r="15" fill="#8a1d27"/><circle cx="723.0" cy="432" r="15" fill="#8a1d27"/>
+<circle cx="689.0" cy="590" r="36" fill="#8a1d27"/>
+  </g>
 </svg>

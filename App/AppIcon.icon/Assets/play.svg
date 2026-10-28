@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
   <title>play</title>
-  <path d="M476,448 L476,576 L580,512 Z" fill="#ffffff" stroke="#ffffff" stroke-width="40" stroke-linejoin="round"/>
+  <g transform="translate(512 512) scale(1.5161) translate(-512 -512)">
+<path d="M490,476 L490,548 L550,512 Z" fill="#ffffff" stroke="#ffffff" stroke-width="26" stroke-linejoin="round"/>
+  </g>
 </svg>

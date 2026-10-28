@@ -6,6 +6,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ### Changed
 
+- **A new app icon:** the two Joy-Cons joined as one controller around a play button, instead of a console with a screen. The colors are the same.
+
 - **Controllers with a generic name show their kind:** an Xbox controller on a USB cable, which calls itself just "Controller", now shows as "Xbox Controller" in Console Mode. A controller with a name of its own still shows that name.
 
 - **A game started from Console Mode returns to Console Mode when it quits,** whether with ⌘Q or a crash. Before, macOS brought forward the app you'd used last on the desktop. Console Mode now covers the screen on the desktop, with the menu bar and Dock hidden, instead of opening a full-screen Space of its own. A game that quits hands the screen back to the desktop, where Console Mode is now waiting.

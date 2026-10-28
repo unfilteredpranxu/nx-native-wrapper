@@ -38,12 +38,12 @@
         {
           "glass": false,
           "hidden": false,
-          "image-name": "screen.svg",
-          "name": "screen"
+          "image-name": "plate.svg",
+          "name": "plate"
         }
       ],
       "lighting": "individual",
-      "name": "Console",
+      "name": "Controller",
       "shadow": {
         "kind": "layer-color",
         "opacity": 0.5
