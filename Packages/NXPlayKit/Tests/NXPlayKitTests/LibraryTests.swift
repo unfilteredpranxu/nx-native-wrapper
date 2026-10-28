@@ -144,6 +144,19 @@ import Testing
         #expect(library.problem == nil)
     }
 
+    @Test func aKeptBuildRefusesTheBuildsThatRewriteIt() throws {
+        let library = library()
+        var game = job("Kept", .succeeded).game
+        game.isKept = true
+        library.buildIPA(game)
+        #expect(library.problem == Library.keptBuildProblem)
+        #expect(library.jobs.isEmpty)
+        library.problem = nil
+        library.makeMacApp(game)
+        #expect(library.problem == Library.keptBuildProblem)
+        #expect(library.jobs.isEmpty)
+    }
+
     @Test func theOtherMetalFailureSuggestsTheSetting() {
         let library = library()
         let job = job("Wonder", .failed(1))

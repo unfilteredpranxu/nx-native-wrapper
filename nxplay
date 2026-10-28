@@ -116,6 +116,17 @@ else
   echo "nxplay: could not update $repo, going on with the current code" >&2
 fi
 
+# The IPA, the Mac app and a device install build in the same work folder as the Mac build and rewrite files its
+# launcher runs (the patched game code, the shader tables): a kept build would play against them
+if [[ $ipa -eq 1 || $mac_app -eq 1 || -n "$device" ]]; then
+  for f in "$game"/*_build/keep; do
+    if [[ -f "$f" ]]; then
+      echo "nxplay: this game's build is kept (NX Play's Keep This Build), and this build would rewrite files it runs; unkeep it first (rm '$f')" >&2
+      exit 1
+    fi
+  done
+fi
+
 if [[ $ipa -eq 1 ]]; then
   # the script's own default output (<game folder>/<the profile's IPA name>); it reuses every step a Mac build made
   cd "$repo"
@@ -252,6 +263,21 @@ start() {
   exit
 }
 
+# The launcher records the nxnative code it was built with: when that is not the checkout's, rebuild, whichever run
+# pulled the update (an IPA or a device install pulls it too, and rewrites the files the Mac build shares).
+# A launcher from before this line was written has none and goes by this run's update alone.
+current_tree="$(git -C "$repo" rev-parse 'HEAD^{tree}' 2> /dev/null || true)"
+if [[ $rebuild -eq 0 ]]; then
+  launcher="$(find_launcher)"
+  built=""
+  if [[ -n "$launcher" ]]; then built="$(sed -n 's/^# nxnative tree //p' "$launcher")"; fi
+  if [[ -n "$built" && -n "$current_tree" && "$built" != "$current_tree" ]]; then
+    # a kept build says so below instead
+    [[ -f "$(dirname "$launcher")/keep" ]] || echo "nxplay: this build was made with other nxnative code than the checkout has now: rebuilding"
+    rebuild=1
+  fi
+fi
+
 # A build marked kept (NX Play's Keep This Build: a keep file in it) plays as it is after an nxnative update, which
 # can break a game that works; only an explicit --rebuild replaces it
 if [[ $rebuild -eq 1 && $explicit_rebuild -eq 0 ]]; then
@@ -314,7 +340,7 @@ fi
 # "cd <id>_build/run && ...": the launcher goes into <id>_build
 run_dir="$(python3 -c 'import shlex, sys; print(shlex.split(sys.argv[1])[1])' "$cmd")"
 launcher="$(dirname "$run_dir")/$launcher_name"
-printf '#!/bin/sh\n# written by nxplay from the build output\n%s\n' "$cmd" > "$launcher"
+printf '#!/bin/sh\n# written by nxplay from the build output\n# nxnative tree %s\n%s\n' "$current_tree" "$cmd" > "$launcher"
 chmod +x "$launcher"
 
 echo "saved: $launcher"

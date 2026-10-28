@@ -10,6 +10,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ### Fixed
 
+- **A build no longer plays against files another build rewrote.** Install on Device, Build IPA and Make Mac App build in the same folder as the Mac build, and rewrite its patched game code and shader tables with the nxnative they run. If one of them pulled an nxnative update, the next Play skipped the rebuild and started the old Mac host with the new files. `nxplay` now records the nxnative code each Mac build was made with, in `start_mac.sh`, and rebuilds when the checkout's differs, whichever run pulled it. Builds made before this change don't have that record yet and pick it up at their next rebuild.
+- **Keep This Build protects the build from those other builds too.** While a game is kept, Install on Device, Build IPA and Make Mac App are disabled, and `nxplay --ipa`, `--mac-app` and `--device` refuse to run. Turn off Keep This Build to use them.
 - Console Mode keeps the game tiles in the middle of the screen. They used to jump up whenever a build's progress bar appeared under the selected game.
 
 ## 1.6 — 2026-10-27

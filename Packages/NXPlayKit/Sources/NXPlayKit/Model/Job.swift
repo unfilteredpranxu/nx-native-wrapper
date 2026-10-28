@@ -10,6 +10,15 @@ public final class Job: Identifiable {
         case macApp
         /// Through Xcode: prepare the project, build it signed, install and start it.
         case install(Device)
+
+        /// Builds in the Mac build's work folder with the current nxnative, rewriting the patched game code and the
+        /// shader tables its launcher runs: not for a kept build.
+        public var rewritesTheMacBuild: Bool {
+            switch self {
+            case .ipa, .macApp, .install: true
+            case .extract, .rebuild, .play: false
+            }
+        }
     }
 
     public enum Status: Equatable, Sendable {

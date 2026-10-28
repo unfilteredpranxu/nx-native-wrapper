@@ -13,6 +13,8 @@ struct GameActions: View {
         let busy = game.map(library.isBusy) ?? true
         let job = game.flatMap(library.job(for:))
         let active = job?.status.isActive == true
+        // these build in the Mac build's folder and rewrite what a kept build runs
+        let kept = game?.isKept == true
 
         Group {
             if let game, !game.isExtracted {
@@ -62,11 +64,11 @@ struct GameActions: View {
                 Divider()
                 Button("Look Again", systemImage: "arrow.clockwise") { library.refreshDevices() }
             }
-            .disabled(busy || game?.isExtracted != true || game?.canBuildIPA != true)
+            .disabled(busy || kept || game?.isExtracted != true || game?.canBuildIPA != true)
             Button(game?.ipaURL == nil ? "Build IPA" : "Rebuild IPA", systemImage: "shippingbox") {
                 game.map(library.buildIPA)
             }
-            .disabled(busy || game?.canBuildIPA != true)
+            .disabled(busy || kept || game?.canBuildIPA != true)
             // a standalone app for the Dock and Launchpad; NX Play keeps playing from the folder
             Button(
                 game?.macAppURL == nil ? "Make Mac App" : "Remake Mac App",
@@ -74,7 +76,7 @@ struct GameActions: View {
             ) {
                 game.map(library.makeMacApp)
             }
-            .disabled(busy || game?.isExtracted != true || game?.canBuildFromFiles != true)
+            .disabled(busy || kept || game?.isExtracted != true || game?.canBuildFromFiles != true)
             Button("Transfer Saves…", systemImage: "arrow.left.arrow.right") {
                 game.map(library.transferSaves)
             }

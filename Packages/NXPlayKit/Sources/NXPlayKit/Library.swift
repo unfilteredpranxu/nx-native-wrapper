@@ -290,7 +290,12 @@ public final class Library {
     }
 
     private func run(_ kind: Job.Kind, _ game: Game, select: Bool = true) {
-        guard !isBusy(game), let command = command(kind, game) else { return }
+        guard !isBusy(game) else { return }
+        if game.isKept, kind.rewritesTheMacBuild {
+            problem = Self.keptBuildProblem
+            return
+        }
+        guard let command = command(kind, game) else { return }
         let job = Job(kind: kind, game: game, command: command)
         job.onFinish = { [weak self] job in self?.finished(job) }
         jobs[game.id] = job
@@ -397,6 +402,11 @@ public final class Library {
         if allowOtherMetal { arguments.insert("--allow-other-metal", at: 0) }
         return NXPlayCommand(script: script, arguments: arguments, environment: environment)
     }
+
+    static let keptBuildProblem = """
+        This game's build is kept. Building an IPA, a Mac app or installing on a device rewrites files the kept \
+        build runs, so turn off Keep This Build first.
+        """
 
     /// build_ipa_from_nsp.py's message when this Mac's Metal compiler isn't the tested one (dmsh_chain.lock).
     static let otherMetalMarker = "Metal compiler is not the one the shaders were tested with"
