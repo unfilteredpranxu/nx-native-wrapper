@@ -11,9 +11,7 @@ struct GameCard: View {
             GameIcon(url: game.iconURL)
                 // under the badges, not around the card: a container's help hides theirs
                 .help(help)
-                .overlay(alignment: .topLeading) {
-                    if library.hasProfile(game) { ProfileBadge().padding(6) }
-                }
+                .overlay(alignment: .topLeading) { ProfileBadges(game: game).padding(6) }
                 .overlay(alignment: .topTrailing) { IconBadges(game: game).padding(6) }
                 // on the artwork, so a build doesn't make the card taller
                 .overlay(alignment: .bottom) {
@@ -239,14 +237,66 @@ struct IconBadges: View {
     }
 }
 
-/// A game nxnative has a profile for, rather than one it would guess.
-struct ProfileBadge: View {
+/// How far nxnative has got with a game: tested, in bring-up, or a profile it guesses (none). Then, when nxnative
+/// changed the game's profile since its build, what the next rebuild brings.
+struct ProfileBadges: View {
+    let game: Game
+    @Environment(Library.self) private var library
+
     var body: some View {
-        IconBadge(
-            text: "Known game", symbol: "checkmark", color: .green,
-            help:
-                "Known game: nxnative has a game profile for it. A game without one is packed from a profile guessed from its files, and may not boot."
-        )
+        HStack(spacing: 4) {
+            if let profile = library.profile(game) {
+                switch profile.stage {
+                case .tested, .profiled:
+                    IconBadge(
+                        text: "Known game", symbol: "checkmark", color: .green,
+                        help: Self.help(profile))
+                case .bringUp:
+                    IconBadge(
+                        text: "In bring-up", symbol: "hammer.fill", color: .orange,
+                        help: Self.help(profile))
+                }
+            } else if game.titleID != nil {
+                IconBadge(
+                    text: "Guessed", symbol: "questionmark", color: .gray,
+                    help:
+                        "No profile in nxnative: the game is packed from a profile guessed from its files, and may not boot."
+                )
+            }
+            let news = library.news(game)
+            if !news.isEmpty {
+                IconBadge(
+                    text: "\(news.count) new", symbol: "sparkles", color: .blue,
+                    help: Self.help(news, kept: game.isKept))
+            }
+        }
+    }
+
+    static func help(_ profile: GameProfile) -> String {
+        [
+            profile.headline,
+            profile.stage == .bringUp
+                ? profile.galleryNote.map {
+                    "In nxnative's tested games" + ($0.isEmpty ? "" : " · \($0)")
+                }
+                : nil,
+            profile.validated.map { "Regression-checked: \($0)" },
+            "Game › nxnative Notes… has more.",
+        ].compactMap(\.self).joined(separator: "\n")
+    }
+
+    static func help(_ news: [ProfileCommit], kept: Bool) -> String {
+        let list =
+            news.prefix(8).map { "• \($0.subject) (\($0.age))" }
+            + (news.count > 8 ? ["• … and \(news.count - 8) more"] : [])
+        return
+            ([
+                "nxnative changed this game's profile since its build (\(news.count) commit\(news.count == 1 ? "" : "s")):"
+            ] + list + [
+                kept
+                    ? "The build is kept, so it plays without them until you rebuild."
+                    : "The next play rebuilds with them."
+            ]).joined(separator: "\n")
     }
 }
 

@@ -111,6 +111,13 @@ if update_nxnative; then
     fi
     git -C "$repo" --no-pager log --no-decorate --format='  %C(yellow)%h%C(reset) %s %C(dim)(%an, %ar)%C(reset)' -n 30 "$before..HEAD"
     if (( count > 30 )); then echo "  … and $(( count - 30 )) older"; fi
+    # the ones for this game's profile, which a long list can bury
+    for b in "$game"/*_build; do
+      [[ -d "$b" ]] || continue
+      ours="$(git -C "$repo" --no-pager log --no-decorate --no-merges --format='  %C(yellow)%h%C(reset) %s' "$before..HEAD" -- "dm/games/$(basename "$b" _build)")"
+      if [[ -n "$ours" ]]; then echo "for this game:"; echo "$ours"; fi
+      break
+    done
   fi
 else
   echo "nxplay: could not update $repo, going on with the current code" >&2

@@ -28,7 +28,7 @@ struct GameList: View {
                         .help(row.game.folder.path)
                         Spacer(minLength: 4)
                         HStack(spacing: 4) {
-                            if library.hasProfile(row.game) { ProfileBadge() }
+                            ProfileBadges(game: row.game).library(library)
                             IconBadges(game: row.game)
                         }
                         .scaleEffect(0.85)

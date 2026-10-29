@@ -210,16 +210,64 @@ public final class Library {
                 || !AppHome.venvIsCurrent)
         games = root.map(GameScanner.scan(root:)) ?? []
         profiles = Self.profiles(repo: repo)
+        let repoURL = URL(filePath: repo, directoryHint: .isDirectory)
+        gameProfiles = GameProfile.read(
+            repo: repoURL,
+            titleIDs: Set(games.compactMap { $0.titleID?.uppercased() }).intersection(profiles))
+        refreshNews(repo: repoURL)
         watchCopies()
+    }
+
+    /// The game whose nxnative notes are shown (Game › nxnative Notes…).
+    public var notesGame: Game?
+
+    /// What nxnative says about the games here that it has a profile for, by title ID.
+    public private(set) var gameProfiles: [String: GameProfile] = [:]
+
+    public func profile(_ game: Game) -> GameProfile? {
+        game.titleID.flatMap { gameProfiles[$0.uppercased()] }
+    }
+
+    /// nxnative's commits to a game's profile since its build, by title ID: what its next rebuild brings.
+    public private(set) var profileNews: [String: [ProfileCommit]] = [:]
+
+    public func news(_ game: Game) -> [ProfileCommit] {
+        game.titleID.flatMap { profileNews[$0.uppercased()] } ?? []
+    }
+
+    @ObservationIgnored private var newsTask: Task<Void, Never>?
+    @ObservationIgnored private var lastFetch: Date?
+    @ObservationIgnored private var newsBuilds: [String: String]?
+
+    /// Looks for profile news when the builds changed, and fetches nxnative at most hourly, never while a job runs
+    /// (nxplay fetches then too). A refresh comes often (each activation, every few seconds while a copy runs): one
+    /// that changes nothing runs no git.
+    private func refreshNews(repo: URL) {
+        guard !isScreenshot, newsTask == nil else { return }
+        let builds = Dictionary(
+            games.compactMap { game -> (String, String)? in
+                guard let id = game.titleID?.uppercased(), profiles.contains(id),
+                    let tree = game.buildFolder.flatMap(ProfileNews.builtTree)
+                else { return nil }
+                return (id, tree)
+            }, uniquingKeysWith: { a, _ in a })
+        let fetch = isIdle && (lastFetch.map { -$0.timeIntervalSinceNow > 3600 } ?? true)
+        guard fetch || builds != newsBuilds else { return }
+        if fetch { lastFetch = .now }
+        newsBuilds = builds
+        newsTask = Task {
+            let news = await Task.detached {
+                if fetch { ProfileNews.fetch(repo: repo) }
+                return ProfileNews.read(repo: repo, builds: builds)
+            }.value
+            profileNews = news
+            newsTask = nil
+        }
     }
 
     /// Title IDs nxnative has a game profile for (dm/games/<title ID>/game.tsv). A game without one is surveyed and
     /// packed from a provisional profile guessed from its files, which may not boot.
     public private(set) var profiles: Set<String> = []
-
-    public func hasProfile(_ game: Game) -> Bool {
-        game.titleID.map { profiles.contains($0.uppercased()) } ?? false
-    }
 
     static func profiles(repo: String) -> Set<String> {
         let folder = URL(filePath: repo, directoryHint: .isDirectory).appending(path: "dm/games")

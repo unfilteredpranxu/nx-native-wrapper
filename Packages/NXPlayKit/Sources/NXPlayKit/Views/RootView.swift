@@ -40,6 +40,9 @@ public struct RootView: View {
             .sheet(item: Bindable(library).transfer) { transfer in
                 TransferSavesView(transfer: transfer)
             }
+            .sheet(item: Bindable(library).notesGame) { game in
+                ProfileNotesView(game: game)
+            }
             .alert("Can't run nxplay", isPresented: problemShown) {
                 Button("OK") {}
             } message: {

@@ -85,6 +85,11 @@ struct GameActions: View {
 
             Divider()
 
+            Button("nxnative Notes…", systemImage: "text.book.closed") {
+                library.notesGame = game
+            }
+            .disabled(game?.titleID == nil)
+            .shortcut("i", [.command, .option], if: inMenuBar)
             Button("Show in Finder", systemImage: "folder") {
                 game.map {
                     NSWorkspace.shared.activateFileViewerSelecting([$0.buildFolder ?? $0.folder])

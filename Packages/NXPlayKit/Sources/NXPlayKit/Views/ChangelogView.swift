@@ -7,21 +7,30 @@ struct ChangelogContent: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
-                ForEach(changelog.sections) { section in
-                    if !section.title.isEmpty {
-                        Text(section.title).font(.title2.bold())
-                            .padding(.top, section.id == changelog.sections.first?.id ? 0 : 14)
-                    }
-                    ForEach(Array(section.blocks.enumerated()), id: \.offset) { _, block in
-                        Self.view(block)
-                    }
+            ChangelogBlocks(changelog: changelog)
+                .padding(20)
+        }
+    }
+}
+
+/// The releases' blocks, without a scroll view of their own.
+struct ChangelogBlocks: View {
+    let changelog: Changelog
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 10) {
+            ForEach(changelog.sections) { section in
+                if !section.title.isEmpty {
+                    Text(section.title).font(.title2.bold())
+                        .padding(.top, section.id == changelog.sections.first?.id ? 0 : 14)
+                }
+                ForEach(Array(section.blocks.enumerated()), id: \.offset) { _, block in
+                    Self.view(block)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .textSelection(.enabled)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
     }
 
     @ViewBuilder private static func view(_ block: Changelog.Block) -> some View {

@@ -4,6 +4,12 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+### Added
+
+- **How far nxnative has got with a game:** the badge in the top-left corner of a game's artwork now tells three cases apart. A green check means nxnative lists the game as tested. An orange hammer means its profile is still in bring-up, and hovering shows how far it has got, such as "on the Mac 3D World reaches World 1-1". A grey question mark means nxnative has no profile and guesses one. **Game › nxnative Notes…** (⌥⌘I) shows what nxnative writes about the game: its stage, the regression check's last green run, and the opening of the profile's notes, with a link to the full notes on GitHub.
+
+- **Your games' fixes:** when nxnative has changed a game's profile since the game was built, a blue badge shows how many commits, and hovering lists them. NX Play checks nxnative for new commits about once an hour, without changing your copy, so the badge shows before you play. The commits are also in nxnative Notes. When a play pulls nxnative's update, the log lists that game's commits on their own, under "for this game:".
+
 ## 1.7.6 — 2026-10-29
 
 ### Added

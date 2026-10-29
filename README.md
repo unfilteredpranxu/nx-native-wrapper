@@ -81,6 +81,7 @@ Right-click a game for more, or use the **Game** menu:
 - **Build IPA**: an unsigned IPA in the game folder, for AltStore, Sideloadly and the like.
 - **Make Mac App**: a standalone, double-clickable app of the game (nxnative's `--platform mac-app`) in the game folder, for the Dock or Launchpad. It's made of APFS clones of the extracted files, so it takes almost no space on the same volume. It keeps its own save in `~/Library/Application Support/nxnative/<title ID>`, separate from NX Play's.
 - **Transfer Saves**: compares the Mac's save with a device's, file by file, and copies one over the other. The replaced save is kept in `<title ID>_build/run/save-backups`.
+- **nxnative Notes…** (⌥⌘I): what nxnative says about the game: tested, in bring-up, or no profile (a badge on the artwork says the same), and the profile's commits since your build (a blue badge counts them).
 - **Show in Finder**, **Open Save Folder**, **Open Build Logs**.
 
 ![Transfer Saves: the Mac's save is newer than the iPad's](docs/transfer-saves.webp)
