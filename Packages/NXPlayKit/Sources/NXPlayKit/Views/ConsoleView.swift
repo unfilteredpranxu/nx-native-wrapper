@@ -35,11 +35,14 @@ struct ConsoleView: View {
             } else {
                 Carousel(games: games, selection: selected?.id)
             }
-            Hints(game: selected, gamepad: library.gamepad)
-                .overlay(alignment: .bottomLeading) { FooterBuild(jobs: library.buildingJobs) }
-                .animation(.easeInOut(duration: 0.25), value: library.buildingJobs.isEmpty)
-                .padding(.horizontal, 56)
-                .padding(.bottom, 36)
+            // the build beside the hints, in the layout: as an overlay of the one-line hints it rose over the tiles
+            HStack(alignment: .bottom, spacing: 24) {
+                FooterBuild(jobs: library.buildingJobs)
+                Hints(game: selected, gamepad: library.gamepad)
+            }
+            .animation(.easeInOut(duration: 0.25), value: library.buildingJobs.isEmpty)
+            .padding(.horizontal, 56)
+            .padding(.bottom, 36)
         }
         .background(.black)
         .ignoresSafeArea()
@@ -321,33 +324,49 @@ private struct Pill: View {
 private struct FooterBuild: View {
     let jobs: [Job]
 
+    static let bar = 520.0
+
     var body: some View {
-        if let job = jobs.first {
-            HStack(spacing: 16) {
-                ProgressView().controlSize(.small)
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text(job.kind == .play ? "Building \(job.game.name)" : job.game.name)
-                            .fontWeight(.semibold)
-                        if jobs.count > 1 {
-                            Text("+\(jobs.count - 1) more").foregroundStyle(.white.opacity(0.6))
-                        }
-                    }
-                    .font(.title3)
-                    ProgressView(value: job.progressFraction)
-                        .tint(.white)
-                        .frame(width: 420)
-                    Text(job.progressText)
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.7))
+        let job = jobs.first
+        // the spinner and the title, the bar with its percentage, the stage: the text lines end where the bar does.
+        // Drawn without a build too, invisible: its space stays, so the banner and the tiles don't move as builds
+        // start and end.
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                // no spinning while nothing builds: the placeholder only holds the space
+                if job != nil {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Color.clear.frame(width: 16, height: 16)
                 }
-                .lineLimit(1)
-                Text("\(Int((job.progressFraction * 100).rounded()))%")
-                    .font(.title2.weight(.semibold).monospacedDigit())
+                Text(
+                    job.map { $0.kind == .play ? "Building \($0.game.name)" : $0.game.name } ?? " "
+                )
+                .fontWeight(.semibold)
+                if jobs.count > 1 {
+                    Text("+\(jobs.count - 1) more").foregroundStyle(.white.opacity(0.6))
+                        .layoutPriority(1)
+                }
             }
-            .foregroundStyle(.white)
-            .transition(.opacity)
+            .font(.title3)
+            .frame(width: Self.bar, alignment: .leading)
+            HStack(spacing: 14) {
+                ProgressView(value: job?.progressFraction ?? 0)
+                    .tint(.white)
+                    .frame(width: Self.bar)
+                Text("\(Int(((job?.progressFraction ?? 0) * 100).rounded()))%")
+                    .font(.title3.weight(.semibold).monospacedDigit())
+            }
+            Text(job?.progressText ?? " ")
+                .font(.callout)
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: Self.bar, alignment: .leading)
         }
+        .lineLimit(1)
+        .fixedSize()
+        .foregroundStyle(.white)
+        .opacity(job == nil ? 0 : 1)
+        .accessibilityHidden(job == nil)
     }
 }
 
