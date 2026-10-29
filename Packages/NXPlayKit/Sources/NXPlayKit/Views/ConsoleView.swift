@@ -107,41 +107,56 @@ private struct Banner: View {
     let game: Game?
     let banner: URL?
 
+    /// How far the fade reaches below the banner's own area, over the tiles: the image keeps its place and size there
+    /// (its fill crop has more of it below), only the blend into the backdrop gets taller.
+    static let overhang = 140.0
+
     var body: some View {
-        // the artwork as an overlay of a flexible colour: scaledToFill would otherwise size the layout to the image
-        Color.clear
-            .overlay {
-                if let banner, let image = IconCache.image(at: banner) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFill()
-                        .id(banner)
-                        .transition(.opacity)
+        GeometryReader { geometry in
+            let height = geometry.size.height
+            let drawn = height + Self.overhang
+            // the artwork as an overlay of a flexible colour, filling the banner's own area as before: scaledToFill
+            // would otherwise size the layout to the image
+            Color.clear
+                .frame(height: height)
+                .overlay {
+                    if let banner, let image = IconCache.image(at: banner) {
+                        Image(nsImage: image)
+                            .resizable()
+                            .interpolation(.high)
+                            .scaledToFill()
+                            .id(banner)
+                            .transition(.opacity)
+                    }
                 }
-            }
-            .clipped()
-            .overlay {
-                LinearGradient(
-                    stops: [
-                        .init(color: .black.opacity(0.55), location: 0),
-                        .init(color: .clear, location: 0.25),
-                    ], startPoint: .top, endPoint: .bottom)
-            }
-            .overlay {
-                LinearGradient(
-                    colors: [.black.opacity(0.6), .clear], startPoint: .leading,
-                    endPoint: UnitPoint(x: 0.65, y: 0.5))
-            }
-            // opaque down to the middle, then fading out: the banner melts into the backdrop instead of into black
-            .mask {
-                LinearGradient(
-                    stops: [
-                        .init(color: .black, location: 0.5), .init(color: .clear, location: 1),
-                    ],
-                    startPoint: .top, endPoint: .bottom)
-            }
-            .animation(.easeInOut(duration: 0.45), value: game?.id)
+                // drawn down into the overhang, and cut there and at the top
+                .frame(height: drawn, alignment: .top)
+                .clipped()
+                .overlay {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black.opacity(0.55), location: 0),
+                            .init(color: .clear, location: 0.25 * height / drawn),
+                        ], startPoint: .top, endPoint: .bottom)
+                }
+                .overlay {
+                    LinearGradient(
+                        colors: [.black.opacity(0.6), .clear], startPoint: .leading,
+                        endPoint: UnitPoint(x: 0.65, y: 0.5))
+                }
+                // opaque down to the banner's middle, then fading out through the overhang: it melts into the backdrop
+                .mask {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black, location: 0.5 * height / drawn),
+                            .init(color: .clear, location: 1),
+                        ],
+                        startPoint: .top, endPoint: .bottom)
+                }
+                // laid out at the banner's height; the overhang draws over what follows, under the tiles
+                .frame(height: height, alignment: .top)
+        }
+        .animation(.easeInOut(duration: 0.45), value: game?.id)
     }
 }
 
