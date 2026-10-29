@@ -39,6 +39,16 @@ public enum AppHome {
             ?? folder.appending(path: "venv", directoryHint: .isDirectory)
     }
 
+    /// Whether the Python environment has the packages this NX Play's uv.lock asks for: bin/setup keeps a copy of the
+    /// lock it last synced to in the environment, so an update that adds a package (zbic) asks for Setup once, rather
+    /// than a build failing on the import.
+    static var venvIsCurrent: Bool {
+        guard let lock = (setupProject ?? sourceRoot)?.appending(path: "uv.lock"),
+            let wanted = try? Data(contentsOf: lock)
+        else { return true }
+        return (try? Data(contentsOf: venv.appending(path: "nxplay-uv.lock"))) == wanted
+    }
+
     /// nxplay, from the bundle (or the checkout, for tests run from it).
     static var script: URL? {
         Bundle.main.url(forResource: "nxplay", withExtension: nil)

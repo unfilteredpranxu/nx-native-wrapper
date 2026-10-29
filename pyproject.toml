@@ -11,6 +11,7 @@ dependencies = [
   "fonttools",
   "backports.zstd; python_version < '3.14'",
   "nsz",                                     # NSZ / XCZ (compressed) game files
+  "zbic",                                    # ZBIC (Nintendo's zstd) code modules, system 22.0.0 on
 ]
 
 [tool.uv]

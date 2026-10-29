@@ -102,10 +102,12 @@ section "Python (.venv)"
 if ! command -v uv > /dev/null; then
   fail "uv is not installed: brew install uv"
 elif (( check )); then
-  if "$venv/bin/python3" -c 'import lz4, capstone, fontTools, nsz' 2> /dev/null; then ok "$("$venv/bin/python3" --version) with nxnative's packages"
-  else fail "the Python packages are missing: uv sync --locked"; fi
+  # the venv's copy of uv.lock is the lock it was last synced to: a newer NX Play that adds a package asks for setup
+  if "$venv/bin/python3" -c 'import lz4, capstone, fontTools, nsz, zbic' 2> /dev/null && cmp -s uv.lock "$venv/nxplay-uv.lock"; then
+    ok "$("$venv/bin/python3" --version) with nxnative's packages"
+  else fail "the Python packages are missing or out of date: uv sync --locked"; fi
 else
-  if uv sync --locked --quiet; then ok "$("$venv/bin/python3" --version) with nxnative's packages (uv.lock)"
+  if uv sync --locked --quiet && cp uv.lock "$venv/nxplay-uv.lock"; then ok "$("$venv/bin/python3" --version) with nxnative's packages (uv.lock)"
   else fail "uv sync failed"; fi
 fi
 

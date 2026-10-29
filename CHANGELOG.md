@@ -10,6 +10,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 - **The changelog in the app:** Help › NX Play Changelog lists every release. When an update is ready, **What's New** beside Restart to Update shows what it changes since your version, every release you skipped included. The running version shows it, so it first appears for the update after this one.
 
+### Fixed
+
+- **Games with zstd-compressed code build:** games made with system 22.0.0 or later, such as Well Dweller, can store their code compressed with Nintendo's variant of zstd (ZBIC). nxnative decodes it with the `zbic` Python package, which setup didn't install, so the build stopped at the first step. Setup installs it now. NX Play shows the Setup banner once after this update, until Setup has run and added the package.
+
 ### Changed
 
 - **A new app icon:** the two Joy-Cons joined as one controller around a play button, instead of a console with a screen. The colors are the same.

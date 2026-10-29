@@ -206,7 +206,8 @@ public final class Library {
         needsSetup =
             !isScreenshot
             && (!fm.fileExists(atPath: repo + "/scripts/build_ipa_from_nsp.py")
-                || !fm.isExecutableFile(atPath: AppHome.venv.appending(path: "bin/python3").path))
+                || !fm.isExecutableFile(atPath: AppHome.venv.appending(path: "bin/python3").path)
+                || !AppHome.venvIsCurrent)
         games = root.map(GameScanner.scan(root:)) ?? []
         profiles = Self.profiles(repo: repo)
         watchCopies()
