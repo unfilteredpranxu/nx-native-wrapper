@@ -4,6 +4,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+## 1.7.7 — 2026-10-29
+
 ### Added
 
 - **Cloud saves:** Settings › Saves can sync each game's save through iCloud Drive or a folder you pick, so the game's iPhone app plays on from the same save. Pick the same folder in the iPhone app's Cloud saves. This is nxnative's own sync: each game keeps one file, `<title ID>/save.dmsync`, which the game brings in when it starts and sends a few seconds after each save. When both sides changed, the newer save wins and the other is kept in the save's backups. A game picks the setting up at its next play; a build made before nxnative had cloud saves gets it when it rebuilds. A save made in the last seconds before you quit goes up at the game's next start.
