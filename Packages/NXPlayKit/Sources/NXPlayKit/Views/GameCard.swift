@@ -9,6 +9,11 @@ struct GameCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             GameIcon(url: game.iconURL)
+                // under the badges, not around the card: a container's help hides theirs
+                .help(help)
+                .overlay(alignment: .topLeading) {
+                    if library.hasProfile(game) { ProfileBadge().padding(6) }
+                }
                 .overlay(alignment: .topTrailing) { IconBadges(game: game).padding(6) }
                 // on the artwork, so a build doesn't make the card taller
                 .overlay(alignment: .bottom) {
@@ -25,6 +30,7 @@ struct GameCard: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            .help(help)
             GameStatus(game: game, job: job)
         }
         .padding(GameGrid.cardInset)
@@ -40,7 +46,10 @@ struct GameCard: View {
         .onTapGesture(count: 2) { library.primaryAction(for: game) }
         .simultaneousGesture(TapGesture().onEnded { library.selection = game.id })
         .contextMenu { GameActions(game: game) }
-        .help(job.flatMap { $0.showsProgress ? $0.progressText : nil } ?? game.folder.path)
+    }
+
+    private var help: String {
+        job.flatMap { $0.showsProgress ? $0.progressText : nil } ?? game.folder.path
     }
 
     private var subtitle: String {
@@ -227,6 +236,17 @@ struct IconBadges: View {
             + (size.map {
                 ", " + ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file)
             } ?? "")
+    }
+}
+
+/// A game nxnative has a profile for, rather than one it would guess.
+struct ProfileBadge: View {
+    var body: some View {
+        IconBadge(
+            text: "Known game", symbol: "checkmark", color: .green,
+            help:
+                "Known game: nxnative has a game profile for it. A game without one is packed from a profile guessed from its files, and may not boot."
+        )
     }
 }
 

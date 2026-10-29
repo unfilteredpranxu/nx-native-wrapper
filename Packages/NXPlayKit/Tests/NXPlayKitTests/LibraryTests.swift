@@ -242,4 +242,21 @@ import Testing
         defaults.set("/games", forKey: Library.Keys.root)  // chose a folder before the default changed
         #expect(Library(defaults: defaults, isScreenshot: true).showsLog)
     }
+
+    @Test func knowsTheGamesNxnativeHasAProfileFor() throws {
+        let repo = FileManager.default.temporaryDirectory.appending(
+            path: "nxplay-profiles-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: repo) }
+        let games = repo.appending(path: "dm/games")
+        for name in ["0100F2C0115B6000", "0100abc000000000", "__pycache__"] {
+            try FileManager.default.createDirectory(
+                at: games.appending(path: name), withIntermediateDirectories: true)
+        }
+        for name in ["0100F2C0115B6000", "0100abc000000000"] {
+            try Data().write(to: games.appending(path: "\(name)/game.tsv"))
+        }
+        try Data().write(to: games.appending(path: "game.py"))
+        #expect(Library.profiles(repo: repo.path) == ["0100F2C0115B6000", "0100ABC000000000"])
+        #expect(Library.profiles(repo: repo.appending(path: "missing").path).isEmpty)
+    }
 }

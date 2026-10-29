@@ -20,12 +20,19 @@ struct GameList: View {
             Table(of: GameRow.self, selection: $library.selection, sortOrder: $order) {
                 TableColumn("Game", value: \.name) { row in
                     HStack(spacing: 8) {
-                        GameIcon(url: row.game.iconURL).frame(width: 28, height: 28)
-                        Text(row.game.name).lineLimit(1)
+                        // beside the badges, not around them: a container's help hides theirs
+                        HStack(spacing: 8) {
+                            GameIcon(url: row.game.iconURL).frame(width: 28, height: 28)
+                            Text(row.game.name).lineLimit(1)
+                        }
+                        .help(row.game.folder.path)
                         Spacer(minLength: 4)
-                        IconBadges(game: row.game).scaleEffect(0.85)
+                        HStack(spacing: 4) {
+                            if library.hasProfile(row.game) { ProfileBadge() }
+                            IconBadges(game: row.game)
+                        }
+                        .scaleEffect(0.85)
                     }
-                    .help(row.game.folder.path)
                 }
                 .width(min: 200, ideal: 300)
                 TableColumn("Version", value: \.version) { row in

@@ -208,7 +208,25 @@ public final class Library {
             && (!fm.fileExists(atPath: repo + "/scripts/build_ipa_from_nsp.py")
                 || !fm.isExecutableFile(atPath: AppHome.venv.appending(path: "bin/python3").path))
         games = root.map(GameScanner.scan(root:)) ?? []
+        profiles = Self.profiles(repo: repo)
         watchCopies()
+    }
+
+    /// Title IDs nxnative has a game profile for (dm/games/<title ID>/game.tsv). A game without one is surveyed and
+    /// packed from a provisional profile guessed from its files, which may not boot.
+    public private(set) var profiles: Set<String> = []
+
+    public func hasProfile(_ game: Game) -> Bool {
+        game.titleID.map { profiles.contains($0.uppercased()) } ?? false
+    }
+
+    static func profiles(repo: String) -> Set<String> {
+        let folder = URL(filePath: repo, directoryHint: .isDirectory).appending(path: "dm/games")
+        let fm = FileManager.default
+        let names = (try? fm.contentsOfDirectory(atPath: folder.path)) ?? []
+        return Set(
+            names.filter { fm.fileExists(atPath: folder.appending(path: "\($0)/game.tsv").path) }
+                .map { $0.uppercased() })
     }
 
     @ObservationIgnored private var copyWatch: Task<Void, Never>?
