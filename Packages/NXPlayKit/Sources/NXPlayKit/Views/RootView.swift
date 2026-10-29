@@ -5,6 +5,7 @@ import SwiftUI
 public struct RootView: View {
     @Environment(Library.self) private var library
     @Environment(\.openWindow) private var openWindow
+    @FocusState private var searchFocused: Bool
     #if DEBUG
         @Environment(\.openSettings) private var openSettings
     #endif
@@ -19,12 +20,18 @@ public struct RootView: View {
                 library.root.map { ($0.path as NSString).abbreviatingWithTildeInPath } ?? ""
             )
             .toolbar { toolbar }
+            .searchable(
+                text: Bindable(library).search, placement: .toolbar, prompt: "Search Games"
+            )
+            .searchFocused($searchFocused)
+            .onChange(of: library.searchRequests) { searchFocused = true }
             .toolbar(library.consoleMode ? .hidden : .visible, for: .windowToolbar)
             .background(
                 // screenshots show Console Mode in the window, at the README's size, not across a whole screen
                 ConsoleWindowController(consoleMode: library.consoleMode && !library.isScreenshot)
             )
             .background(DockProgress())
+
             .safeAreaInset(edge: .top, spacing: 0) {
                 if !library.consoleMode {
                     VStack(spacing: 0) {
@@ -112,6 +119,19 @@ public struct RootView: View {
             .help("Extract every game not extracted yet, one after another")
             .disabled(library.extractableGames.isEmpty)
             ControlsButton()
+        }
+    }
+
+    /// Edit › Find Games… (⌘F): a toolbar search field doesn't take ⌘F by itself.
+    public struct FindMenuItem: View {
+        @Environment(Library.self) private var library
+
+        public init() {}
+
+        public var body: some View {
+            Button("Find Games…") { library.findGames() }
+                .keyboardShortcut("f")
+                .disabled(library.root == nil || library.consoleMode)
         }
     }
 

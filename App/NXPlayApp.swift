@@ -31,6 +31,10 @@ struct NXPlayApp: App {
                 Button("Refresh") { library.refresh() }
                     .keyboardShortcut("r")
             }
+            CommandGroup(after: .textEditing) {
+                RootView.FindMenuItem()
+                    .library(library)
+            }
             CommandGroup(before: .toolbar) {
                 ViewStyleMenuItems()
                     .library(library)

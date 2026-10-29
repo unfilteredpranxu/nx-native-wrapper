@@ -10,6 +10,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 - **Your games' fixes:** when nxnative has changed a game's profile since the game was built, a blue badge shows how many commits, and hovering lists them. NX Play checks nxnative for new commits about once an hour, without changing your copy, so the badge shows before you play. The commits are also in nxnative Notes. When a play pulls nxnative's update, the log lists that game's commits on their own, under "for this game:".
 
+- **Search games:** the toolbar's search field (Edit › Find Games…, ⌘F) narrows the grid and the list to the games with every word you type in their name, title ID or folder name. Console Mode still shows every game.
+
 ## 1.7.6 — 2026-10-29
 
 ### Added

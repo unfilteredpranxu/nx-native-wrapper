@@ -371,13 +371,37 @@ public final class Library {
         transfer = SaveTransfer(game: game, preferredBundleID: bundleID)
     }
 
+    // MARK: - Search
+
+    /// The library's search field (grid and list); Console Mode shows every game.
+    public var search = ""
+    /// Edit › Find Games… asks the window to focus the search field: each request counts up.
+    public private(set) var searchRequests = 0
+
+    public func findGames() { searchRequests += 1 }
+
+    /// The games the grid and the list show: those with every word of the search in their name, title ID or folder
+    /// name.
+    public var shownGames: [Game] {
+        let words = search.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard !words.isEmpty else { return games }
+        return games.filter { game in
+            let fields = [game.name, game.titleID ?? "", game.folder.lastPathComponent]
+            return words.allSatisfy { word in fields.contains { $0.localizedStandardContains(word) }
+            }
+        }
+    }
+
     // MARK: - Navigation (controller, Console Mode keys)
 
     /// The games in the order the grid shows them, extracted first, then the rest; Console Mode only has the
     /// extracted ones, the games it can play, the last played first and the never played after them by name.
     public var navigableGames: [Game] {
+        guard consoleMode else {
+            let shown = shownGames
+            return shown.filter(\.isExtracted) + shown.filter { !$0.isExtracted }
+        }
         let extracted = games.filter(\.isExtracted)
-        guard consoleMode else { return extracted + games.filter { !$0.isExtracted } }
         return extracted.filter { $0.lastPlayed != nil }.sorted { $0.lastPlayed! > $1.lastPlayed! }
             + extracted.filter { $0.lastPlayed == nil }
     }

@@ -9,13 +9,15 @@ struct GameList: View {
 
     var body: some View {
         @Bindable var library = library
-        let rows = library.games.map(GameRow.init).sorted(using: order)
+        let rows = library.shownGames.map(GameRow.init).sorted(using: order)
         let extracted = rows.filter(\.game.isExtracted)
         let remaining = rows.filter { !$0.game.isExtracted }
-        if rows.isEmpty {
+        if library.games.isEmpty {
             ContentUnavailableView(
                 "No Games", systemImage: "gamecontroller",
                 description: Text("No subfolder here holds NSP, NSZ, XCI or XCZ files."))
+        } else if rows.isEmpty {
+            ContentUnavailableView.search(text: library.search)
         } else {
             Table(of: GameRow.self, selection: $library.selection, sortOrder: $order) {
                 TableColumn("Game", value: \.name) { row in

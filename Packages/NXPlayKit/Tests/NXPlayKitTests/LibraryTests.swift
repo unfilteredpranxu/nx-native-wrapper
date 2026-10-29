@@ -92,6 +92,17 @@ import Testing
         #expect(names() == "B Built")
         for _ in 0..<5 { library.handle(.right) }
         #expect(names() == "D Built")
+
+        // the search narrows the grid, the list and their navigation (every word, in any field), not Console Mode
+        library.search = "built d"
+        #expect(library.navigableGames.map(\.folder.lastPathComponent) == ["B Built", "D Built"])
+        library.handle(.menu)
+        #expect(library.shownGames.map(\.folder.lastPathComponent) == ["D Built"])
+        #expect(library.navigableGames.map(\.folder.lastPathComponent) == ["D Built"])
+        library.search = "0100000000010000"
+        #expect(library.shownGames.map(\.folder.lastPathComponent) == ["B Built", "D Built"])
+        library.search = "nothing"
+        #expect(library.shownGames.isEmpty)
     }
 
     @Test func consoleModeStartsAtTheGamePlayedLast() throws {

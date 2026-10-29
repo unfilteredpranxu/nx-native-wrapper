@@ -18,8 +18,9 @@ struct GameGrid: View {
     ]
 
     var body: some View {
-        let extracted = library.games.filter(\.isExtracted)
-        let remaining = library.games.filter { !$0.isExtracted }
+        let shown = library.shownGames
+        let extracted = shown.filter(\.isExtracted)
+        let remaining = shown.filter { !$0.isExtracted }
         ScrollViewReader { proxy in
             ScrollView {
                 if library.games.isEmpty {
@@ -29,6 +30,9 @@ struct GameGrid: View {
                         description: Text("No subfolder here holds NSP, NSZ, XCI or XCZ files.")
                     )
                     .padding(.top, 40)
+                } else if shown.isEmpty {
+                    ContentUnavailableView.search(text: library.search)
+                        .padding(.top, 40)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 28) {
                         if !extracted.isEmpty {
