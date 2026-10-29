@@ -89,6 +89,7 @@ public final class Library {
             if consoleMode, !oldValue {
                 selection = navigableGames.first?.id
                 fetchBanners(retry: true)
+                NSCursor.setHiddenUntilMouseMoves(true)
             }
         }
     }
@@ -460,6 +461,9 @@ public final class Library {
     }
 
     func handle(_ command: Gamepad.Command) {
+        // the couch has no use for the pointer: hidden while the controller or the keys drive Console Mode, back as
+        // soon as the mouse moves
+        if consoleMode || command == .menu { NSCursor.setHiddenUntilMouseMoves(true) }
         switch command {
         case .left, .up: move(-1)
         case .right, .down: move(1)
