@@ -100,9 +100,9 @@ Pick files one by one, a whole game, or a whole kind. Nothing is selected until 
 
 Settings has a tab for each subject: **General** (the games folder, the keys file, the nxnative folder, the Metal compiler check, Setup), **Playing** (the game language, full screen, Apple's Metal performance HUD), **Saves** (the backup repository), **Devices** (the Apple team for device installs) and **Updates**. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls. While builds run, the Dock icon shows their progress.
 
-**On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen, with the games ready to play as a carousel of their artwork, the one you played last first, plus the clock and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
+**On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen. The selected game's eShop banner fills the top half, with its name and badges. Below it, the games ready to play sit in a row of their artwork, the one you played last first, with the clock and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
 
-![Console Mode: the playable games as a carousel, with the controller's button hints](docs/console.webp)
+![Console Mode: the selected game's banner across the top with its name and badges, the playable games in a row below, and the controller's button hints](docs/console.webp)
 
 <img src="docs/settings.webp" alt="NX Play's Settings" width="560">
 
