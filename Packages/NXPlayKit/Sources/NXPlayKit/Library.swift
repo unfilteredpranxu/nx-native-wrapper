@@ -88,7 +88,7 @@ public final class Library {
         didSet {
             if consoleMode, !oldValue {
                 selection = navigableGames.first?.id
-                fetchBanners()
+                fetchBanners(retry: true)
             }
         }
     }
@@ -112,6 +112,8 @@ public final class Library {
     @ObservationIgnored private var tasksInFlight = 0
     @ObservationIgnored let artwork: ArtworkStore
     @ObservationIgnored private var bannerFetch: Task<Void, Never>?
+    /// The title IDs a banner was looked for this launch: a refresh doesn't look again for one titledb lacks.
+    @ObservationIgnored private var bannersTried: Set<String> = []
     /// Screenshot mode (Screenshots.swift): sample teams and devices that Xcode and devicectl must not replace.
     @ObservationIgnored let isScreenshot: Bool
     #if DEBUG
@@ -226,6 +228,7 @@ public final class Library {
             repo: repoURL,
             titleIDs: Set(games.compactMap { $0.titleID?.uppercased() }).intersection(profiles))
         refreshNews(repo: repoURL)
+        fetchBanners()
         watchCopies()
     }
 
@@ -316,19 +319,22 @@ public final class Library {
         game.titleID.flatMap { banners[$0.uppercased()] }
     }
 
-    /// Downloads the banners of the games Console Mode shows that have none yet; only when Console Mode opens, so
-    /// NX Play goes online for artwork only once it is used. Screenshots use what is on disk.
-    func fetchBanners() {
+    /// Downloads the banners of the games Console Mode shows that have none yet, ahead of it: at each refresh (launch,
+    /// a new game), in Console Mode's order, so the game it opens on comes first, each shown as it lands. A title
+    /// looked for once this launch is left alone until Console Mode opens (`retry`), which tries the missing ones
+    /// again. Screenshots use what is on disk.
+    func fetchBanners(retry: Bool = false) {
         guard !isScreenshot, bannerFetch == nil else { return }
-        let wanted = Set(
-            games.filter(\.isExtracted).compactMap { $0.titleID?.uppercased() }
-        ).subtracting(banners.keys)
+        let wanted = Self.consoleOrder(games).compactMap { $0.titleID?.uppercased() }.filter {
+            banners[$0] == nil && (retry || !bannersTried.contains($0))
+        }
         guard !wanted.isEmpty else { return }
+        bannersTried.formUnion(wanted)
         bannerFetch = Task { [weak self, artwork] in
-            let got = await artwork.fetch(wanted)
-            guard let self else { return }
-            banners.merge(got) { $1 }
-            bannerFetch = nil
+            _ = await artwork.fetch(wanted) { id, file in
+                await MainActor.run { self?.banners[id] = file }
+            }
+            self?.bannerFetch = nil
         }
     }
 
@@ -432,6 +438,11 @@ public final class Library {
             let shown = shownGames
             return shown.filter(\.isExtracted) + shown.filter { !$0.isExtracted }
         }
+        return Self.consoleOrder(games)
+    }
+
+    /// Console Mode's games: the extracted ones, the last played first, the never played after them by name.
+    static func consoleOrder(_ games: [Game]) -> [Game] {
         let extracted = games.filter(\.isExtracted)
         return extracted.filter { $0.lastPlayed != nil }.sorted { $0.lastPlayed! > $1.lastPlayed! }
             + extracted.filter { $0.lastPlayed == nil }

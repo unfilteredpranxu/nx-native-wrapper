@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Console Mode: the window full screen, the games as a carousel of their artwork over a blurred backdrop of
-/// the selected one, its title and state below, the clock and controller up top, button hints at the bottom.
-/// A controller, the arrow keys with Return and Esc, or the mouse drive it.
+/// Console Mode: the window full screen. The selected game's eShop banner fills the upper part edge to edge, the clock
+/// and controller over its top and the game's name and badges over its foot; the games as a carousel of their artwork
+/// below it, button hints at the bottom. A controller, the arrow keys with Return and Esc, or the mouse drive it.
 struct ConsoleView: View {
     @Environment(Library.self) private var library
     @FocusState private var focused: Bool
@@ -13,34 +13,35 @@ struct ConsoleView: View {
     var body: some View {
         let games = library.navigableGames  // the extracted ones
         let selected = games.first { $0.id == library.selection } ?? games.first
-        ZStack {
-            Backdrop(game: selected, banner: selected.flatMap(library.banner(for:)))
-            VStack(spacing: 0) {
-                TopBar(gamepad: library.gamepad)
-                    .padding(.horizontal, 56)
-                    .padding(.top, 40)
-                Spacer(minLength: 20)
-                if games.isEmpty {
-                    Text("No games ready to play yet").font(.largeTitle.bold()).foregroundStyle(
-                        .white.opacity(0.7))
-                } else {
-                    // the details hang under the carousel without taking part in the layout: the progress bar
-                    // coming and going made them taller and moved the tiles up and down
-                    Carousel(games: games, selection: selected?.id)
-                        .overlay(alignment: .top) {
-                            if let selected {
-                                Details(game: selected, job: library.job(for: selected))
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(.top, Carousel.height)
-                            }
-                        }
+        VStack(spacing: 0) {
+            // the banner takes what the carousel and the hints leave: about half of the screen
+            Banner(game: selected, banner: selected.flatMap(library.banner(for:)))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    TopBar(gamepad: library.gamepad)
+                        .padding(.horizontal, 56)
+                        .padding(.top, 40)
                 }
-                Spacer(minLength: 20)
-                Hints(game: selected, gamepad: library.gamepad)
-                    .padding(.horizontal, 56)
-                    .padding(.bottom, 40)
+                .overlay(alignment: .bottomLeading) {
+                    if let selected {
+                        Caption(game: selected, job: library.job(for: selected))
+                            .padding(.horizontal, 56)
+                    }
+                }
+            if games.isEmpty {
+                Text("No games ready to play yet").font(.largeTitle.bold())
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(height: Carousel.height)
+            } else {
+                Carousel(games: games, selection: selected?.id)
             }
+            Hints(game: selected, gamepad: library.gamepad)
+                .overlay(alignment: .bottomLeading) { FooterBuild(jobs: library.buildingJobs) }
+                .animation(.easeInOut(duration: 0.25), value: library.buildingJobs.isEmpty)
+                .padding(.horizontal, 56)
+                .padding(.bottom, 36)
         }
+        .background(.black)
         .ignoresSafeArea()
         .environment(\.colorScheme, .dark)
         .focusable()
@@ -71,23 +72,21 @@ struct ConsoleView: View {
     }
 }
 
-/// The selected game's eShop banner over the whole screen, softened so the tiles and the title read over it; without
-/// one, its icon, blurred into colour. It cross-fades as the selection moves.
-private struct Backdrop: View {
+/// The selected game's eShop banner edge to edge, sharp, fading into the black below it and darkened behind the top
+/// bar and the name; without one, its icon blurred into colour. It cross-fades as the selection moves.
+private struct Banner: View {
     let game: Game?
     let banner: URL?
 
     var body: some View {
-        // the artwork as an overlay of a flexible colour: in a ZStack, scaledToFill sized the whole screen to the
-        // square image, pushing the top bar and the hints out of a wide window
+        // the artwork as an overlay of a flexible colour: scaledToFill would otherwise size the layout to the image
         Color.black
             .overlay {
                 if let banner, let image = IconCache.image(at: banner) {
                     Image(nsImage: image)
                         .resizable()
+                        .interpolation(.high)
                         .scaledToFill()
-                        .blur(radius: 12)
-                        .opacity(0.85)
                         .id(banner)
                         .transition(.opacity)
                 } else if let url = game?.iconURL, let image = IconCache.image(at: url) {
@@ -101,13 +100,22 @@ private struct Backdrop: View {
                         .transition(.opacity)
                 }
             }
+            .clipped()
             .overlay {
                 LinearGradient(
-                    colors: [.black.opacity(0.25), .black.opacity(0.55), .black.opacity(0.9)],
-                    startPoint: .top, endPoint: .bottom)
+                    stops: [
+                        .init(color: .black.opacity(0.55), location: 0),
+                        .init(color: .clear, location: 0.25),
+                        .init(color: .clear, location: 0.5),
+                        .init(color: .black, location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+            }
+            .overlay {
+                LinearGradient(
+                    colors: [.black.opacity(0.6), .clear], startPoint: .leading,
+                    endPoint: UnitPoint(x: 0.65, y: 0.5))
             }
             .animation(.easeInOut(duration: 0.45), value: game?.id)
-            .clipped()
     }
 }
 
@@ -116,8 +124,11 @@ private struct TopBar: View {
 
     var body: some View {
         HStack(spacing: 20) {
-            Label("NX Play", systemImage: "gamecontroller.fill")
-                .font(.title2.weight(.bold))
+            HStack(spacing: 12) {
+                Logo().frame(height: 30)
+                Text("NX Play")
+            }
+            .font(.title2.weight(.bold))
             Spacer()
             if let name = gamepad.name {
                 HStack(spacing: 6) {
@@ -144,17 +155,25 @@ private struct TopBar: View {
     }
 }
 
-/// The games side by side, the selected one larger and glowing, kept in the middle of the screen.
+/// The games side by side from the left edge, the selected one larger and outlined. The row moves a tile at a time,
+/// only when the selection would leave the screen, so it starts at the left and ends at the right.
 private struct Carousel: View {
     let games: [Game]
     let selection: Game.ID?
     @Environment(Library.self) private var library
+    /// The first tile on screen.
+    @State private var first = 0
+
+    static let spacing = 40.0
+    /// The caption's margin, plus what the selected tile grows by on each side, so its edge lines up with the name.
+    static let margin = 56 + ConsoleView.tile * 0.09
 
     var body: some View {
         GeometryReader { geometry in
+            let width = geometry.size.width
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 40) {
+                    LazyHStack(spacing: Self.spacing) {
                         ForEach(games) { game in
                             Tile(game: game, isSelected: game.id == selection)
                                 .id(game.id)
@@ -165,20 +184,39 @@ private struct Carousel: View {
                                 .onTapGesture { library.selection = game.id }
                         }
                     }
-                    // the first and last tiles can reach the middle too
-                    .padding(.horizontal, max(0, (geometry.size.width - ConsoleView.tile) / 2))
+                    .padding(.horizontal, Self.margin)
                     .frame(height: geometry.size.height)
                 }
                 .scrollDisabled(true)
                 .scrollClipDisabled()  // shadows fade out instead of ending at the carousel's edges
-                .onChange(of: selection, initial: true) {
-                    withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
-                        proxy.scrollTo(selection, anchor: .center)
-                    }
-                }
+                // in place when Console Mode opens; a selection that moves after that slides there
+                .onAppear { follow(width: width, proxy: proxy, animated: false) }
+                .onChange(of: selection) { follow(width: width, proxy: proxy) }
+                .onChange(of: width) { follow(width: width, proxy: proxy, animated: false) }
             }
         }
         .frame(height: Self.height)
+    }
+
+    /// Moves the row just enough to keep the selection on screen, then puts the first tile at the margin.
+    private func follow(width: Double, proxy: ScrollViewProxy, animated: Bool = true) {
+        guard let index = games.firstIndex(where: { $0.id == selection }), width > 0 else { return }
+        let tile = ConsoleView.tile
+        let fits = max(1, Int((width - 2 * Self.margin + Self.spacing) / (tile + Self.spacing)))
+        first = min(max(first, index - fits + 1), index, max(0, games.count - fits))
+        // the unit point at which a tile's leading edge lands on the left margin, or its trailing edge on the right one:
+        // at the end of the row the last tile sits at the right margin
+        let lead = width > tile ? Self.margin / (width - tile) : 0
+        let atEnd = games.count > fits && first == games.count - fits
+        let anchor = UnitPoint(x: atEnd ? 1 - lead : lead, y: 0.5)
+        let id = atEnd ? games[games.count - 1].id : games[first].id
+        if animated {
+            withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+                proxy.scrollTo(id, anchor: anchor)
+            }
+        } else {
+            proxy.scrollTo(id, anchor: anchor)
+        }
     }
 
     static let height = ConsoleView.tile * 1.5
@@ -216,34 +254,100 @@ private struct Tile: View {
     }
 }
 
-/// The selected game's name, what it is and what it is doing.
-private struct Details: View {
+/// The selected game's name, badges and what it is doing, at the foot of the banner.
+private struct Caption: View {
     let game: Game
     let job: Job?
+    @Environment(Library.self) private var library
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             Text(game.name)
-                .font(.system(size: 44, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            HStack(spacing: 12) {
-                GameBadge(game: game, job: job).scaleEffect(1.3)
+                .font(.system(size: 64, weight: .bold))
+                .lineLimit(2)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: 1000, alignment: .leading)
+                .shadow(color: .black.opacity(0.5), radius: 8, y: 2)
+            HStack(spacing: 10) {
+                GameBadge(game: game, job: job).scaleEffect(1.3).padding(.horizontal, 10)
+                if let profile = library.profile(game) {
+                    switch profile.stage {
+                    case .tested, .profiled:
+                        Pill(text: "Known game", symbol: "checkmark", color: .green)
+                    case .bringUp:
+                        Pill(text: "In bring-up", symbol: "hammer.fill", color: .orange)
+                    }
+                } else if game.titleID != nil {
+                    Pill(text: "No profile", symbol: "questionmark", color: .gray)
+                }
+                let news = library.news(game).count
+                if news > 0 {
+                    Pill(text: "\(news) new from nxnative", symbol: "sparkles", color: .blue)
+                }
+                if game.isKept { Pill(text: "Kept", symbol: "lock.fill", color: .orange) }
                 if let version = game.version {
-                    Text("v\(version)").foregroundStyle(.white.opacity(0.7))
+                    Text("v\(version)").foregroundStyle(.white.opacity(0.75))
                 }
                 if let played = game.lastPlayed {
                     Text("Played \(played, format: .relative(presentation: .named))")
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(.white.opacity(0.75))
                 }
             }
             .font(.title3)
-            JobProgress(job: job)
-                .frame(width: 380)
         }
         .foregroundStyle(.white)
-        .padding(.top, 8)
         .animation(.easeInOut(duration: 0.2), value: game.id)
+    }
+}
+
+/// A badge sized for the couch: solid, to read over any banner.
+private struct Pill: View {
+    let text: LocalizedStringKey
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Label(text, systemImage: symbol)
+            .font(.title3.weight(.semibold))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .foregroundStyle(.white)
+            .background(Capsule().fill(color.opacity(0.9)))
+    }
+}
+
+/// The footer's left: the build running (a game that needs a rebuild before it plays, or any other), whichever game is
+/// selected, so the banner's caption keeps its place. Several builds: the running one, with how many there are.
+private struct FooterBuild: View {
+    let jobs: [Job]
+
+    var body: some View {
+        if let job = jobs.first {
+            HStack(spacing: 16) {
+                ProgressView().controlSize(.small)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(job.kind == .play ? "Building \(job.game.name)" : job.game.name)
+                            .fontWeight(.semibold)
+                        if jobs.count > 1 {
+                            Text("+\(jobs.count - 1) more").foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
+                    .font(.title3)
+                    ProgressView(value: job.progressFraction)
+                        .tint(.white)
+                        .frame(width: 420)
+                    Text(job.progressText)
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                .lineLimit(1)
+                Text("\(Int((job.progressFraction * 100).rounded()))%")
+                    .font(.title2.weight(.semibold).monospacedDigit())
+            }
+            .foregroundStyle(.white)
+            .transition(.opacity)
+        }
     }
 }
 

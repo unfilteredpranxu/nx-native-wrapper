@@ -49,6 +49,32 @@ import Testing
         #expect(store.cachedBanners().count == 1)
     }
 
+    @Test func handsOverEachBannerAsItLandsInTheOrderAsked() async throws {
+        let a = root.appending(path: "a.jpg")
+        let b = root.appending(path: "b.jpg")
+        try Data("a".utf8).write(to: a)
+        try Data("b".utf8).write(to: b)
+        let list = root.appending(path: "list.json")
+        try JSONSerialization.data(withJSONObject: [
+            "1": ["id": "0100000000000001", "bannerUrl": a.absoluteString],
+            "2": ["id": "0100000000000002", "bannerUrl": b.absoluteString],
+        ]).write(to: list)
+        let store = ArtworkStore(
+            directory: root.appending(path: "Banners"), titleList: list, allowsFileURLs: true)
+        let order = Order()
+        // the game Console Mode opens on first, whatever the title IDs' order; a repeat is asked once
+        let got = await store.fetch(["0100000000000002", "0100000000000001", "0100000000000002"]) {
+            id, _ in await order.add(id)
+        }
+        #expect(got.count == 2)
+        #expect(await order.ids == ["0100000000000002", "0100000000000001"])
+    }
+
+    actor Order {
+        var ids: [String] = []
+        func add(_ id: String) { ids.append(id) }
+    }
+
     @Test func takesImagesOnlyFromNintendosCDN() async throws {
         let list = try titleList(banner: root.appending(path: "missing.jpg"))
         let store = ArtworkStore(directory: root.appending(path: "Banners"), titleList: list)

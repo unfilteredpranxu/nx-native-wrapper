@@ -42,18 +42,25 @@ actor ArtworkStore {
             }, uniquingKeysWith: { a, _ in a })
     }
 
-    /// Downloads the banners of these titles (upper-case title IDs) that aren't on disk → the ones it got.
-    func fetch(_ titleIDs: Set<String>) async -> [String: URL] {
-        let wanted = titleIDs.subtracting(cachedBanners().keys)
-        guard !wanted.isEmpty, let links = await index(for: wanted) else { return [:] }
+    /// Downloads the banners of these titles (upper-case title IDs) that aren't on disk, in the order given, handing
+    /// each to `each` as it lands → the ones it got.
+    func fetch(
+        _ titleIDs: [String], each: (@Sendable (String, URL) async -> Void)? = nil
+    ) async -> [String: URL] {
+        let cached = cachedBanners()
+        var seen = Set<String>()
+        let wanted = titleIDs.filter { cached[$0] == nil && seen.insert($0).inserted }
+        guard !wanted.isEmpty, let links = await index(for: Set(wanted)) else { return [:] }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var got: [String: URL] = [:]
-        for id in wanted.sorted() {
+        for id in wanted {
             guard let link = links[id], let url = URL(string: link), allowed(url),
                 let data = await download(url)
             else { continue }
             let file = directory.appending(path: "\(id).jpg")
-            if (try? data.write(to: file, options: .atomic)) != nil { got[id] = file }
+            guard (try? data.write(to: file, options: .atomic)) != nil else { continue }
+            got[id] = file
+            await each?(id, file)
         }
         return got
     }

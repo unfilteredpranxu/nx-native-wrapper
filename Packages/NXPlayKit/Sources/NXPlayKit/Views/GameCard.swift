@@ -154,24 +154,6 @@ struct GameActionButton: View {
     }
 }
 
-/// A build's progress and stage, while one runs (Console Mode, under the title).
-struct JobProgress: View {
-    let job: Job?
-
-    var body: some View {
-        if let job, job.showsProgress {
-            VStack(alignment: .leading, spacing: 2) {
-                ProgressView(value: job.progressFraction)
-                    .controlSize(.small)
-                Text(job.progressText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-    }
-}
-
 /// A thin bar along the bottom of a game's artwork, inside its rounded corners, on a dark track that reads over any art.
 struct IconProgressBar: View {
     let fraction: Double
