@@ -4,6 +4,8 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
+## 1.7.6 — 2026-10-29
+
 ### Added
 
 - **Known games are marked:** a green check in the top-left corner of a game's artwork (in the list, beside its other badges) means nxnative has a game profile for it. A game without one is packed from a profile guessed from its files, and may not boot. Hovering over a badge (the check, the lock of a kept build, IPA, Xcode) explains it again; the game's own tooltip used to cover theirs.
