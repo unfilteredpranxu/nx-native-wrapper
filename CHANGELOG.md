@@ -12,7 +12,7 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ### Fixed
 
-- **Games with zstd-compressed code build:** games made with system 22.0.0 or later, such as Well Dweller, can store their code compressed with Nintendo's variant of zstd (ZBIC). nxnative decodes it with the `zbic` Python package, which setup didn't install, so the build stopped at the first step. Setup installs it now. NX Play shows the Setup banner once after this update, until Setup has run and added the package.
+- **Games with zstd-compressed code build:** games made with system 22.0.0 or later, such as Well Dweller, can store their code compressed with Nintendo's variant of zstd (ZBIC). nxnative decodes it with the `zbic` Python package, which setup didn't install, so the build stopped at the first step. Setup installs it now. NX Play shows the Setup banner once after this update, until Setup has run and added the package. When nxnative starts using another package, each play now names it in the log, with the command that adds it, before a build stops on it.
 
 ### Changed
 

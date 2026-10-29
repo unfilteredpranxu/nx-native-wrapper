@@ -116,6 +116,37 @@ else
   echo "nxplay: could not update $repo, going on with the current code" >&2
 fi
 
+# nxnative's README names the Python packages its scripts import (step 1's pip install line). One added there that this
+# environment lacks fails only mid-build, on its import (zbic: system 22.0.0 code): name it now. A line that changed
+# shape, or a marker this can't read, checks nothing rather than warn wrongly.
+missing_packages() {
+  python3 - "$repo/README.md" <<'PY'
+import re, shlex, sys
+from importlib.metadata import PackageNotFoundError, distribution
+try:
+    line = re.search(r'^python3 -m pip install (.+)$', open(sys.argv[1], encoding='utf-8').read(), re.M)
+    words = shlex.split(line.group(1)) if line else []
+except (OSError, ValueError):
+    words = []
+for word in words:
+    if word.startswith('-'): continue
+    req, _, marker = word.partition(';')
+    if marker.strip():
+        m = re.fullmatch(r"\s*python_version\s*(<|<=|>|>=|==|!=)\s*['\"](\d+(?:\.\d+)*)['\"]\s*", marker)
+        if not m: continue
+        have, want = sys.version_info[:2], tuple(int(x) for x in m[2].split('.'))
+        if not {'<': have < want, '<=': have <= want, '>': have > want, '>=': have >= want, '==': have == want, '!=': have != want}[m[1]]: continue
+    name = re.split(r'[\s<>=!~\[]', req.strip(), maxsplit=1)[0]
+    if not name: continue
+    try: distribution(name)
+    except PackageNotFoundError: print(name)
+PY
+}
+missing="$(missing_packages 2>/dev/null | tr '\n' ' ' || true)"
+if [[ -n "${missing// /}" ]]; then
+  echo "nxplay: nxnative now uses Python packages this environment lacks: ${missing% }. A game whose build needs them stops there; add them with: uv pip install --python '${VIRTUAL_ENV:-$venv}' ${missing% }" >&2
+fi
+
 # How the build script reports its stages: NX Play reads JSON events (NXPLAY_PROGRESS=json; nxnative's
 # docs/frontends.md), a terminal gets the bar redrawn in place, and anything else the script's plain lines.
 # tee makes stdout a pipe: a terminal's bar needs the width the script would see there
