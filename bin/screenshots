@@ -5,6 +5,7 @@
 # terminal it runs in (System Settings > Privacy & Security), which screencapture asks for.
 #
 # usage: bin/screenshots [games folder] [scene...]   (default ~/Games/Switch; scenes: library list console free-up-space settings transfer-saves)
+# env:   NXPLAY_SCREENSHOT_GAME  the game Console Mode shows: a title ID or part of its name (default the middle one)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -26,7 +27,7 @@ for scene in "${scenes[@]}"; do
   ready="$work/$scene.ready"
   rm -f "$ready"
   "$app" -NXPlayScreenshot "$scene" -NXPlayScreenshotRoot "$root" -NXPlayScreenshotReady "$ready" \
-    -ApplePersistenceIgnoreState YES > "$work/$scene.log" 2>&1 &
+    -NXPlayScreenshotGame "${NXPLAY_SCREENSHOT_GAME:-}" -ApplePersistenceIgnoreState YES > "$work/$scene.log" 2>&1 &
   pid=$!
   for _ in $(seq 150); do [[ -s "$ready" ]] && break; sleep 0.2; done
   window="$(cat "$ready" 2>/dev/null || echo "error: the app did not get ready (log: $work/$scene.log)")"

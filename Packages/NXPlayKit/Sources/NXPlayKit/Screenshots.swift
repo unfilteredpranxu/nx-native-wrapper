@@ -22,6 +22,8 @@
         let scene: ScreenshotScene
         let root: URL
         let ready: URL
+        /// `-NXPlayScreenshotGame <title ID or part of the name>`: the game Console Mode shows (default: the middle one).
+        var game: String? = nil
 
         static let windowSize = NSSize(width: 1040, height: 780)
         static let team = AppleTeam(id: "ABCDE12345", name: "Example Team", isFree: false)
@@ -46,7 +48,10 @@
             }
             return Screenshots(
                 scene: scene, root: URL(filePath: root, directoryHint: .isDirectory),
-                ready: URL(filePath: ready))
+                ready: URL(filePath: ready),
+                game: defaults.string(forKey: "NXPlayScreenshotGame").flatMap {
+                    $0.isEmpty ? nil : $0
+                })
         }
 
         @MainActor func makeLibrary() -> Library {
@@ -82,9 +87,15 @@
             case .console:
                 library.gamepad.sample = ("Pro Controller", 0.8)
                 library.consoleMode = true
-                // the middle of the carousel, so games show on both sides
+                // the game asked for, else the middle of the carousel, so games show on both sides
                 let carousel = library.navigableGames
-                library.selection = carousel[carousel.count / 2].id
+                let asked = self.game.flatMap { wanted in
+                    carousel.first {
+                        $0.titleID?.caseInsensitiveCompare(wanted) == .orderedSame
+                            || $0.name.localizedStandardContains(wanted)
+                    }
+                }
+                library.selection = (asked ?? carousel[carousel.count / 2]).id
             case .freeUpSpace, .settings:
                 break  // RootView opens their windows
             case .transferSaves:
