@@ -43,6 +43,7 @@ struct NXPlayApp: App {
             }
             CommandGroup(before: .help) {
                 ControlsButton()
+                ChangelogMenuItem()
             }
             CommandMenu("Game") {
                 GameMenu()
@@ -75,6 +76,11 @@ struct NXPlayApp: App {
             ControlsView()
         }
         .windowResizability(.contentSize)
+
+        Window("NX Play Changelog", id: ChangelogView.windowID) {
+            ChangelogView()
+        }
+        .defaultSize(width: 620, height: 700)
 
         Settings {
             SettingsView()

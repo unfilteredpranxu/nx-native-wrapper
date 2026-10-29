@@ -3,6 +3,7 @@ import SwiftUI
 /// Above the library once an update is staged: it installs when NX Play quits, or now.
 struct UpdateBanner: View {
     let version: String
+    let notes: Changelog
     @Environment(Library.self) private var library
 
     var body: some View {
@@ -14,6 +15,7 @@ struct UpdateBanner: View {
                 Text("NX Play \(version) is ready. It installs when you quit.")
             }
             Spacer()
+            WhatsNewButton(version: version, notes: notes)
             if !library.quitsWhenIdle {
                 Button("Restart to Update") { library.restartToUpdate() }
             }
@@ -34,7 +36,9 @@ struct UpdateSettings: View {
             HStack {
                 status(updater.state)
                 switch updater.state {
-                case .ready: Button("Restart to Update") { library.restartToUpdate() }
+                case .ready(let version, let notes):
+                    WhatsNewButton(version: version, notes: notes)
+                    Button("Restart to Update") { library.restartToUpdate() }
                 case .checking, .downloading: EmptyView()
                 default: Button("Check Now") { Task { await updater.check() } }
                 }

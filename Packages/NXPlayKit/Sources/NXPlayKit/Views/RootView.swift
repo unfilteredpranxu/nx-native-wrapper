@@ -29,8 +29,8 @@ public struct RootView: View {
                 if !library.consoleMode {
                     VStack(spacing: 0) {
                         if library.needsSetup { SetupBanner() }
-                        if case .ready(let version, _) = library.updater.state {
-                            UpdateBanner(version: version)
+                        if case .ready(let version, let notes) = library.updater.state {
+                            UpdateBanner(version: version, notes: notes)
                         }
                     }
                 }

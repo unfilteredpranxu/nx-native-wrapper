@@ -16,8 +16,8 @@ public final class AppUpdater {
         case checking
         case upToDate
         case downloading(version: String)
-        /// Staged in AppHome/Updates: installed when NX Play quits.
-        case ready(version: String, notes: String)
+        /// Staged in AppHome/Updates: installed when NX Play quits. Its changes since this version.
+        case ready(version: String, notes: Changelog)
         case failed(String)
     }
 
@@ -84,7 +84,7 @@ public final class AppUpdater {
             }
             state = .downloading(version: release.version)
             try await fetch(release)
-            state = .ready(version: release.version, notes: release.notes)
+            state = .ready(version: release.version, notes: whatsNew(in: release))
         } catch {
             state = .failed((error as? UpdateError)?.message ?? error.localizedDescription)
         }
@@ -104,6 +104,20 @@ public final class AppUpdater {
     private var stagedApp: URL? {
         let app = folder.appending(path: "staged/NX Play.app")
         return FileManager.default.fileExists(atPath: app.path) ? app : nil
+    }
+
+    /// Every release since this one, from the new app's changelog (one skipped release's changes too); the release's
+    /// own notes when the new app carries no changelog.
+    private func whatsNew(in release: Release) -> Changelog {
+        let releases = stagedApp.flatMap(Changelog.of(app:))?.releases(
+            after: currentVersion, upTo: release.version)
+        if let releases, !releases.isEmpty { return releases }
+        let notes = Changelog(markdown: release.notes)
+        return Changelog(
+            sections: notes.sections.map {
+                Changelog.Section(
+                    title: $0.title.isEmpty ? release.version : $0.title, blocks: $0.blocks)
+            })
     }
 
     private func fetch(_ release: Release) async throws {

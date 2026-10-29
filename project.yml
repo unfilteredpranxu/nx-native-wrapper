@@ -30,6 +30,9 @@ targets:
         buildPhase: resources
       - path: nxplay
         buildPhase: resources
+      # Help › NX Play Changelog, and an update's What's New (read from the downloaded app's copy)
+      - path: CHANGELOG.md
+        buildPhase: resources
     postCompileScripts:
       # the setup NX Play runs from Settings › Setup: bin/setup with the files it reads (AppHome.setupProject)
       - name: Bundle the setup
