@@ -44,7 +44,7 @@ struct ConsoleView: View {
             .padding(.horizontal, 56)
             .padding(.bottom, 36)
         }
-        .background(.black)
+        .background { Backdrop(game: selected) }
         .ignoresSafeArea()
         .environment(\.colorScheme, .dark)
         .focusable()
@@ -75,15 +75,41 @@ struct ConsoleView: View {
     }
 }
 
-/// The selected game's eShop banner edge to edge, sharp, fading into the black below it and darkened behind the top
-/// bar and the name; without one, its icon blurred into colour. It cross-fades as the selection moves.
+/// Behind the whole screen: the selected game's cover, blurred into colour and dimmed, so the part under the banner
+/// carries the game's colours rather than black. It cross-fades as the selection moves.
+private struct Backdrop: View {
+    let game: Game?
+
+    var body: some View {
+        // the artwork as an overlay of a flexible colour: scaledToFill would otherwise size the layout to the image
+        Color.black
+            .overlay {
+                if let url = game?.iconURL, let image = IconCache.image(at: url) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .blur(radius: 80)
+                        .saturation(1.3)
+                        .id(url)
+                        .transition(.opacity)
+                }
+            }
+            .overlay { Color.black.opacity(0.8) }  // dark: the tiles and the hints stand out, the colour stays
+            .clipped()
+            .animation(.easeInOut(duration: 0.45), value: game?.id)
+    }
+}
+
+/// The selected game's eShop banner edge to edge, sharp, its lower part fading to transparent into the blurred cover
+/// below, darkened behind the top bar and the name. Without one, the cover shows through. It cross-fades as the
+/// selection moves.
 private struct Banner: View {
     let game: Game?
     let banner: URL?
 
     var body: some View {
         // the artwork as an overlay of a flexible colour: scaledToFill would otherwise size the layout to the image
-        Color.black
+        Color.clear
             .overlay {
                 if let banner, let image = IconCache.image(at: banner) {
                     Image(nsImage: image)
@@ -91,15 +117,6 @@ private struct Banner: View {
                         .interpolation(.high)
                         .scaledToFill()
                         .id(banner)
-                        .transition(.opacity)
-                } else if let url = game?.iconURL, let image = IconCache.image(at: url) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .blur(radius: 70)
-                        .saturation(1.4)
-                        .opacity(0.75)
-                        .id(url)
                         .transition(.opacity)
                 }
             }
@@ -109,14 +126,20 @@ private struct Banner: View {
                     stops: [
                         .init(color: .black.opacity(0.55), location: 0),
                         .init(color: .clear, location: 0.25),
-                        .init(color: .clear, location: 0.5),
-                        .init(color: .black, location: 1),
                     ], startPoint: .top, endPoint: .bottom)
             }
             .overlay {
                 LinearGradient(
                     colors: [.black.opacity(0.6), .clear], startPoint: .leading,
                     endPoint: UnitPoint(x: 0.65, y: 0.5))
+            }
+            // opaque down to the middle, then fading out: the banner melts into the backdrop instead of into black
+            .mask {
+                LinearGradient(
+                    stops: [
+                        .init(color: .black, location: 0.5), .init(color: .clear, location: 1),
+                    ],
+                    startPoint: .top, endPoint: .bottom)
             }
             .animation(.easeInOut(duration: 0.45), value: game?.id)
     }
