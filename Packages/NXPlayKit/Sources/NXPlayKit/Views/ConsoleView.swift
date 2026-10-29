@@ -171,55 +171,58 @@ private struct Carousel: View {
     /// The caption's margin, plus what the selected tile grows by on each side, so its edge lines up with the name.
     static let margin = 56 + ConsoleView.tile * 0.09
 
+    // A plain row moved by an exact offset, not a scroll view: a held controller direction repeats faster than the
+    // scroll animation, and scrollTo on a lazy row mid-animation (its off-screen positions only estimated) stopped short
+    // of the end, the last game selected off screen.
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: Self.spacing) {
-                        ForEach(games) { game in
-                            Tile(game: game, isSelected: game.id == selection)
-                                .id(game.id)
-                                .onTapGesture(count: 2) {
-                                    library.selection = game.id
-                                    library.handle(.confirm)
-                                }
-                                .onTapGesture { library.selection = game.id }
+            HStack(spacing: Self.spacing) {
+                ForEach(games) { game in
+                    Tile(game: game, isSelected: game.id == selection)
+                        .onTapGesture(count: 2) {
+                            library.selection = game.id
+                            library.handle(.confirm)
                         }
-                    }
-                    .padding(.horizontal, Self.margin)
-                    .frame(height: geometry.size.height)
+                        .onTapGesture { library.selection = game.id }
                 }
-                .scrollDisabled(true)
-                .scrollClipDisabled()  // shadows fade out instead of ending at the carousel's edges
-                // in place when Console Mode opens; a selection that moves after that slides there
-                .onAppear { follow(width: width, proxy: proxy, animated: false) }
-                .onChange(of: selection) { follow(width: width, proxy: proxy) }
-                .onChange(of: width) { follow(width: width, proxy: proxy, animated: false) }
             }
+            .padding(.horizontal, Self.margin)
+            .fixedSize()
+            .offset(x: offset(width: width))
+            .frame(width: width, height: geometry.size.height, alignment: .leading)
+            // in place when Console Mode opens; a selection that moves after that slides there
+            .onAppear { follow(width: width) }
+            .onChange(of: selection) {
+                withAnimation(.spring(duration: 0.4, bounce: 0.15)) { follow(width: width) }
+            }
+            .onChange(of: width) { follow(width: width) }
+            .onChange(of: games.count) { follow(width: width) }
         }
         .frame(height: Self.height)
     }
 
-    /// Moves the row just enough to keep the selection on screen, then puts the first tile at the margin.
-    private func follow(width: Double, proxy: ScrollViewProxy, animated: Bool = true) {
+    /// How many tiles fit between the margins.
+    private func fits(_ width: Double) -> Int {
+        max(1, Int((width - 2 * Self.margin + Self.spacing) / (ConsoleView.tile + Self.spacing)))
+    }
+
+    /// Moves the first tile on screen just enough to keep the selection there.
+    private func follow(width: Double) {
         guard let index = games.firstIndex(where: { $0.id == selection }), width > 0 else { return }
-        let tile = ConsoleView.tile
-        let fits = max(1, Int((width - 2 * Self.margin + Self.spacing) / (tile + Self.spacing)))
+        let fits = fits(width)
         first = min(max(first, index - fits + 1), index, max(0, games.count - fits))
-        // the unit point at which a tile's leading edge lands on the left margin, or its trailing edge on the right one:
-        // at the end of the row the last tile sits at the right margin
-        let lead = width > tile ? Self.margin / (width - tile) : 0
-        let atEnd = games.count > fits && first == games.count - fits
-        let anchor = UnitPoint(x: atEnd ? 1 - lead : lead, y: 0.5)
-        let id = atEnd ? games[games.count - 1].id : games[first].id
-        if animated {
-            withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
-                proxy.scrollTo(id, anchor: anchor)
-            }
-        } else {
-            proxy.scrollTo(id, anchor: anchor)
-        }
+    }
+
+    /// The row's shift: the first tile on screen at the left margin; at the end of the row, the last tile at the right
+    /// one; a row shorter than the screen stays put.
+    private func offset(width: Double) -> Double {
+        let step = ConsoleView.tile + Self.spacing
+        let row = 2 * Self.margin + Double(games.count) * step - Self.spacing
+        guard row > width else { return 0 }
+        let fits = fits(width)
+        if first >= games.count - fits { return width - row }
+        return -Double(first) * step
     }
 
     static let height = ConsoleView.tile * 1.5
