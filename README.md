@@ -88,6 +88,8 @@ Right-click a game for more, or use the **Game** menu:
 
 **Save backup** (Settings): pick a clone of your own private Git repository. While a game plays, NX Play copies its save into a folder named after the game and its title ID (`the-legend-of-zelda-tears-of-the-kingdom-0100f2c0115b6000`) each time the game saves, then commits and pushes. It does this once more when the game quits. Pushing uses your own Git setup (SSH agent or keychain) and never prompts. The log shows each backup. Games started from the Terminal with `nxplay` aren't backed up.
 
+**Cloud saves** (Settings › Saves): a game's Mac and iPhone copies play on from one save, through iCloud Drive (its nxnative Saves folder) or a folder you pick. This is nxnative's own sync: each game keeps one file there, `<title ID>/save.dmsync`. The game brings in the cloud's save when it starts and sends its own a few seconds after each save. On the iPhone, pick the same folder in the game app's Cloud saves. When both sides changed, the newer save wins and the other is kept in the save's backups. A save made in the last seconds before you quit goes up at the game's next start. From the Terminal: `DM_SAVE_SYNC=icloud nxplay <game folder>`.
+
 **Tools › Free Up Space** lists, per game and with their sizes, what you can delete:
 
 - **Game files:** each game's NSP, NSZ, XCI and XCZ files, plus the NSPs a build converted from NSZ. Only games already built for the Mac qualify, since they keep playing from their build. Without these files a game can't be rebuilt: it keeps its current build when nxnative updates, and Install on Device and Build IPA need the files back. If your games folder holds your only copy, keep a backup.
@@ -98,7 +100,7 @@ Pick files one by one, a whole game, or a whole kind. Nothing is selected until 
 
 ![Free Up Space: game files, IPAs and Xcode builds per game, with their sizes](docs/free-up-space.webp)
 
-Settings has a tab for each subject: **General** (the games folder, the keys file, the nxnative folder, the Metal compiler check, Setup), **Playing** (the game language, full screen, Apple's Metal performance HUD), **Saves** (the backup repository), **Devices** (the Apple team for device installs) and **Updates**. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls. While builds run, the Dock icon shows their progress.
+Settings has a tab for each subject: **General** (the games folder, the keys file, the nxnative folder, the Metal compiler check, Setup), **Playing** (the game language, full screen, Apple's Metal performance HUD), **Saves** (the backup repository, cloud saves), **Devices** (the Apple team for device installs) and **Updates**. **Game Controls** (in the menu bar, and the keyboard button in the toolbar) shows the keyboard controls. While builds run, the Dock icon shows their progress.
 
 **On the couch:** a game controller drives the library. The D-pad or left stick chooses a game, A plays it, and Menu switches to **Console Mode** (also ⇧⌘F): full screen. The selected game's eShop banner fills the top half, with its name and badges. Below it, the games ready to play sit in a row of their artwork, the one you played last first, with the clock and the controller's button hints. Games started from it open full screen; Settings can make every game start that way. B or Esc goes back.
 

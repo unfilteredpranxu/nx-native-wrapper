@@ -4,11 +4,9 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 
 ## Unreleased
 
-### Changed
-
-- **Console Mode hides the mouse pointer** when it opens and whenever the controller or the arrow keys move through it. Moving the mouse brings the pointer back.
-
 ### Added
+
+- **Cloud saves:** Settings › Saves can sync each game's save through iCloud Drive or a folder you pick, so the game's iPhone app plays on from the same save. Pick the same folder in the iPhone app's Cloud saves. This is nxnative's own sync: each game keeps one file, `<title ID>/save.dmsync`, which the game brings in when it starts and sends a few seconds after each save. When both sides changed, the newer save wins and the other is kept in the save's backups. A game picks the setting up at its next play; a build made before nxnative had cloud saves gets it when it rebuilds. A save made in the last seconds before you quit goes up at the game's next start.
 
 - **How far nxnative has got with a game:** the badge in the top-left corner of a game's artwork now tells three cases apart. A green check means nxnative lists the game as tested. An orange hammer means its profile is still in bring-up, and hovering shows how far it has got, such as "on the Mac 3D World reaches World 1-1". A grey question mark means nxnative has no profile and guesses one. **Game › nxnative Notes…** (⌥⌘I) shows what nxnative writes about the game: its stage, the regression check's last green run, and the opening of the profile's notes, with a link to the full notes on GitHub.
 
@@ -17,6 +15,10 @@ User-visible changes to NX Play, `nxplay` and the setup. The format follows [Kee
 - **Search games:** the toolbar's search field (Edit › Find Games…, ⌘F) narrows the grid and the list to the games with every word you type in their name, title ID or folder name. Console Mode still shows every game.
 
 - **Game artwork in Console Mode:** the selected game's official eShop banner fills the upper half of the screen edge to edge and fades into a dark, blurred copy of the game's cover, which fills the rest of the screen behind the games. The game's name sits over the banner's foot, with its badges: its state, how far nxnative has got with it, nxnative's new commits for it, Kept, its version and when you last played it. Games without a banner show just the blurred cover. The games row starts at the left and scrolls only when the selection would leave the screen. A build, such as a game rebuilding before it plays, shows its game, stage and percentage in the bottom-left corner, whichever game is selected. NX Play downloads the banners it doesn't have yet in the background, at launch and when a game is added, starting with the game Console Mode opens on. Each banner shows as soon as it arrives, and opening Console Mode tries the missing ones again. It looks them up by title ID in the community database [blawar/titledb](https://github.com/blawar/titledb), the same source NX2Apple uses, and takes the images only from Nintendo's image server. The banners stay in `~/Library/Caches/com.varyform.nxplay/Banners`.
+
+### Changed
+
+- **Console Mode hides the mouse pointer** when it opens and whenever the controller or the arrow keys move through it. Moving the mouse brings the pointer back.
 
 ## 1.7.6 — 2026-10-29
 

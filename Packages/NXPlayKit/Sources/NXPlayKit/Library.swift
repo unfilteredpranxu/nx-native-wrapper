@@ -29,6 +29,7 @@ public final class Library {
         static let fullScreenGames = "fullScreenGames"
         static let saveBackup = "saveBackupRepository"
         static let allowOtherMetal = "allowOtherMetal"
+        static let cloudSaves = "cloudSaves"
     }
 
     /// The games as cards with their icons, or as a sortable list.
@@ -49,6 +50,10 @@ public final class Library {
     public var saveBackupPath: String {
         didSet { defaults.set(saveBackupPath, forKey: Keys.saveBackup) }
     }
+    /// Cloud saves (nxnative's DM_SAVE_SYNC): the folder the games' saves sync through, `icloud` for iCloud Drive ›
+    /// nxnative Saves, empty for off. Each game keeps its own `<title ID>/save.dmsync` there, which its iPhone app
+    /// syncs with too.
+    public var cloudSaves: String { didSet { defaults.set(cloudSaves, forKey: Keys.cloudSaves) } }
     /// Play with Apple's Metal performance HUD (nxplay --fps).
     public var metalHUD: Bool { didSet { defaults.set(metalHUD, forKey: Keys.metalHUD) } }
     /// Start games in full screen (nxplay --fullscreen); always from Console Mode.
@@ -145,6 +150,7 @@ public final class Library {
         nxnativePath = defaults.string(forKey: Keys.nxnative) ?? AppHome.defaultNXNative
         keysPath = defaults.string(forKey: Keys.keys) ?? NSHomeDirectory() + "/.switch/prod.keys"
         saveBackupPath = defaults.string(forKey: Keys.saveBackup) ?? ""
+        cloudSaves = defaults.string(forKey: Keys.cloudSaves) ?? ""
         metalHUD = defaults.bool(forKey: Keys.metalHUD)
         fullScreenGames = defaults.bool(forKey: Keys.fullScreenGames)
         allowOtherMetal = defaults.bool(forKey: Keys.allowOtherMetal)
@@ -634,6 +640,8 @@ public final class Library {
                 (metalHUD ? ["--fps"] : [])
                 + (fullScreenGames || consoleMode ? ["--fullscreen"] : [])
                 + lang + [game.folder.path]
+            // the host reads it from the environment start_mac.sh inherits; off means off, not the shell's
+            environment["DM_SAVE_SYNC"] = Self.cloudSaveTarget(cloudSaves)
         case .install(let device):
             guard let team, let titleID = game.titleID else {
                 problem =
@@ -652,6 +660,13 @@ public final class Library {
         // an nxplay option, before the game folder (a play can rebuild too)
         if allowOtherMetal { arguments.insert("--allow-other-metal", at: 0) }
         return NXPlayCommand(script: script, arguments: arguments, environment: environment)
+    }
+
+    /// DM_SAVE_SYNC for a play: `icloud`, a folder with ~ expanded, or `0` for off.
+    static func cloudSaveTarget(_ setting: String) -> String {
+        let value = setting.trimmingCharacters(in: .whitespaces)
+        if value.isEmpty { return "0" }
+        return value == "icloud" ? value : (value as NSString).expandingTildeInPath
     }
 
     static let keptBuildProblem = """

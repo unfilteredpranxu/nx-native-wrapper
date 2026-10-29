@@ -254,6 +254,17 @@ import Testing
         #expect(Library(defaults: defaults, isScreenshot: true).showsLog)
     }
 
+    @Test func cloudSavesBecomeTheHostsSwitch() {
+        #expect(Library.cloudSaveTarget("") == "0")  // off is said, not left to the shell's environment
+        #expect(Library.cloudSaveTarget("icloud") == "icloud")
+        #expect(Library.cloudSaveTarget("~/Saves") == NSHomeDirectory() + "/Saves")
+        #expect(Library.cloudSaveTarget("/Volumes/Cloud/Saves") == "/Volumes/Cloud/Saves")
+
+        let defaults = defaults()
+        Library(defaults: defaults, isScreenshot: true).cloudSaves = "icloud"
+        #expect(Library(defaults: defaults, isScreenshot: true).cloudSaves == "icloud")
+    }
+
     @Test func knowsTheGamesNxnativeHasAProfileFor() throws {
         let repo = FileManager.default.temporaryDirectory.appending(
             path: "nxplay-profiles-\(UUID().uuidString)")

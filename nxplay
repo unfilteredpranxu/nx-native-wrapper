@@ -17,7 +17,8 @@
 #                  (nxnative's own --allow-other-metal, passed to every build; issue #242)
 #   --lang <code>  game language for this run (DM_LANG: en-US, ja, fr, de, zh-Hans, ...); it must be one the game has
 # env:   NXNATIVE (repository; default ./nxnative in this checkout, as bin/setup clones it, else ../nxnative beside it),
-#        NXPLAY_VENV (Python environment; default .venv in this checkout, made by bin/setup), NX_KEYS (default ~/.switch/prod.keys)
+#        NXPLAY_VENV (Python environment; default .venv in this checkout, made by bin/setup), NX_KEYS (default ~/.switch/prod.keys),
+#        DM_SAVE_SYNC (nxnative's cloud saves: a folder, icloud, or 0; passed on to the game as it is)
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -310,6 +311,7 @@ start() {
   if [[ $fullscreen -eq 1 ]]; then export DM_FULLSCREEN=1; fi
   # NX Play orders Console Mode by the last play: marked at the start and, through the EXIT trap, at the end,
   # however the game ends (quit, crash, NX Play's stop). Hence no exec: bash stays to run the trap.
+  if [[ -n "${DM_SAVE_SYNC:-}" && "$DM_SAVE_SYNC" != 0 ]]; then echo "cloud saves: $DM_SAVE_SYNC"; fi
   played="$(dirname "$1")/run/last_played"
   mkdir -p "$(dirname "$played")"
   touch "$played"

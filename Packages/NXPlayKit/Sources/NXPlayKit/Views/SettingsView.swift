@@ -164,8 +164,63 @@ private struct SaveSettings: View {
                     "A clone of your own private Git repository. While a game plays, NX Play copies its save into a folder named after it (the-game-name-<title ID>) once the game has saved, commits it and pushes, with your Git credentials. Empty: no backup."
                 )
             }
+            CloudSavesSection()
         }
     }
+}
+
+/// Cloud saves (nxnative's DM_SAVE_SYNC): off, iCloud Drive › nxnative Saves, or a folder of the player's.
+private struct CloudSavesSection: View {
+    @Environment(Library.self) private var library
+
+    private enum Mode: Hashable { case off, icloud, folder }
+
+    private var mode: Mode {
+        switch library.cloudSaves {
+        case "": .off
+        case "icloud": .icloud
+        default: .folder
+        }
+    }
+
+    var body: some View {
+        @Bindable var library = library
+        Section {
+            Picker(
+                "Cloud saves",
+                selection: Binding(
+                    get: { mode },
+                    set: { mode in
+                        switch mode {
+                        case .off: library.cloudSaves = ""
+                        case .icloud: library.cloudSaves = "icloud"
+                        case .folder:
+                            // a folder asks for one at once; cancelled, the choice stays as it was
+                            if let url = PathPicker.choose(
+                                directory: true, startingAt: Self.iCloudDrive)
+                            {
+                                library.cloudSaves = url.path
+                            }
+                        }
+                    })
+            ) {
+                Text("Off").tag(Mode.off)
+                Text("iCloud Drive").tag(Mode.icloud)
+                Text("Folder").tag(Mode.folder)
+            }
+            if mode == .folder {
+                PathField(
+                    title: "Cloud saves folder", path: $library.cloudSaves, directory: true,
+                    isValid: exists(library.cloudSaves))
+            }
+        } footer: {
+            Footer(
+                "Each game's save syncs through one file in the folder, <title ID>/save.dmsync, so the game's iPhone app plays on from it: pick the same folder in its own Cloud saves. iCloud Drive is its nxnative Saves folder. When both sides changed, the newer save wins and the other is kept in the save's backups. A game uses this from its next play, a build made before nxnative had cloud saves once it rebuilds. A save made in the last seconds before quitting goes up at the game's next start."
+            )
+        }
+    }
+
+    private static let iCloudDrive = "~/Library/Mobile Documents/com~apple~CloudDocs"
 }
 
 /// Install on Device's signing.
