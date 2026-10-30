@@ -1,0 +1,55 @@
+
+name: NX Play - Verify and Build macOS App
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Compile NX Play source
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v5
+
+      - name: Verify macOS environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -m
+          sw_vers -productVersion
+          xcodebuild -version
+          test -f project.yml
+          test -f Packages/NXPlayKit/Package.swift
+          test -x bin/build
+
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Run Swift tests
+        run: |
+          swift test --package-path Packages/NXPlayKit
+
+      - name: Build unsigned Mac app
+        run: |
+          set -euo pipefail
+          bin/build CODE_SIGNING_ALLOWED=NO
+          test -d 'build/Build/Products/Release/NX Play.app'
+          ditto -c -k --keepParent \
+            'build/Build/Products/Release/NX Play.app' \
+            NXPlay-macOS.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NXPlay-macOS-unsigned
+          path: NXPlay-macOS.zip
+          if-no-files-found: error
+          retention-days: 3
